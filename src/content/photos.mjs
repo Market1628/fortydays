@@ -2,7 +2,18 @@
 // Les images sont servies par le CDN d'Unsplash au format AVIF ou WebP, à la bonne taille.
 // Pour remplacer une photo : changez `src` (identifiant « photo-… » de l'image), `page`
 // (identifiant de la page Unsplash), l'autrice ou l'auteur, et les trois textes alternatifs.
+// Les trois photos de la fin du récit de l'accueil, dans l'ordre : le nouveau-né, le baiser, les bras.
+export const STORY_PHOTOS = ['swaddle', 'kiss', 'cuddle'];
+
 export const PHOTOS = {
+  kiss: {
+    src: 'photo-1701839640481-33f20d4275d8', page: 'By4PyX-_pT4', author: 'Jonathan Borba', user: 'jonathanborba',
+    alt: {
+      fr: 'Une jeune maman embrasse tendrement son nouveau-né, emmailloté dans une couverture blanche.',
+      en: 'A young mother tenderly kisses her newborn, wrapped in a white knitted blanket.',
+      he: 'אמא צעירה מנשקת ברוך את התינוק שלה, העטוף בשמיכה לבנה סרוגה.'
+    }
+  },
   skin: {
     src: 'photo-1583710457367-47de0ea21fef', page: 'aUtvHsu8Uzk', author: 'Hollie Santos', user: 'holliesantos',
     alt: {

@@ -1581,3 +1581,7 @@ html[lang='he'] .site-footer__title { letter-spacing: 0; font-size: 0.95rem; }
 .reassure li { display: inline-flex; align-items: center; gap: 0.45em; }
 .reassure .icon { width: 1.1em; height: 1.1em; color: var(--sage-ink); }
 .final-cta .reassure { justify-content: center; margin-top: 1.4rem; }
+
+/* Crédit des photographies de la fin du récit */
+.story-credit { margin: 1.2rem 0 0; font-size: 0.76rem; color: var(--brown-muted); }
+.story-credit a { color: var(--brown-muted); }

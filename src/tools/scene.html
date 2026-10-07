@@ -17,7 +17,10 @@
 <script type="module">
 import { createHomeScene } from '/assets/js/home-scene.js';
 const params = new URLSearchParams(location.search);
-const scene = createHomeScene({ canvas: document.getElementById('c'), rtl: params.has('rtl'), onHeld: h => console.log('held', h) });
+// Les photos du récit sont lues dans la page d'accueil générée (une seule source : src/content/photos.mjs).
+const home = await fetch('/fr/').then(r => r.text());
+const photos = JSON.parse(((home.match(/data-photos="([^"]+)"/) || [])[1] || '[]').replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+const scene = createHomeScene({ canvas: document.getElementById('c'), rtl: params.has('rtl'), photos, onHeld: h => console.log('held', h) });
 window.S = scene;
 scene.start();
 const r = document.getElementById('r'), v = document.getElementById('v'), q = document.getElementById('q');

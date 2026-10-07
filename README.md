@@ -1,9 +1,9 @@
 # 40 Days : site vitrine et d'inscription
 
 Site statique multilingue (français, anglais, hébreu) pour **40 Days**, l'accompagnement des 40 jours
-après l'accouchement. L'accueil raconte en 3D, au fil du scroll, la croissance d'un embryon de verre nacré jusqu'au bébé
-que sa maman prend dans ses bras (rendu WebGL 2 sur mesure, sans bibliothèque, dans l'esprit du verre
-du skill *Premium 3D Glass* : irisation, dispersion, studio de lumière).
+après l'accouchement. L'accueil raconte au fil du scroll le chemin d'une première cellule jusqu'au bébé que sa maman prend dans
+ses bras : en 3D de verre nacré pour la grossesse (rendu WebGL 2 sur mesure, sans bibliothèque, dans l'esprit
+du skill *Premium 3D Glass*), puis en vraies photographies transformées dans une goutte de verre vivante.
 
 - 24 pages : accueil, forfaits + inscription, plateforme + connexion, contact, 4 pages légales, × 3 langues
 - Aucune dépendance à installer : **Node.js 18 ou plus récent** suffit pour générer et prévisualiser
@@ -130,14 +130,14 @@ pilote une étape du récit (fonction `timeline`) :
 
 | Chapitre | Récit 3D |
 |---|---|
-| 01 Accueil | un embryon de nacre rose dans une bulle de savon irisée ; un petit cœur bat en lumière |
-| 02 Le programme | bras et jambes poussent, la tête trouve ses proportions, le soleil se lève derrière la bulle |
+| 01 Accueil | des traits de lumière rejoignent une perle, qui se divise en 2, 4, 8 puis 16 cellules |
+| 02 Le programme | les cellules forment un embryon dans une bulle de savon irisée ; un petit cœur bat en lumière |
 | 03 Ce qui est inclus | bébé grandit, lové ; des aurores colorées traversent le fond |
-| 04 Témoignages | la bulle frémit puis éclate en gouttelettes de lumière, bébé s'étire et tend les bras ; une maman de verre opalin se condense dans un tourbillon de lumière |
-| 05 Réserver | elle le serre contre elle, leurs cœurs partagent une lumière dorée ; le texte « Maintenant, c'est votre tour… » apparaît |
+| 04 Témoignages | la bulle se déchire en pétales, bébé s'étire, et la photo d'un vrai nouveau-né éclot dans une goutte de verre |
+| 05 Réserver | fondu liquide vers sa maman qui l'embrasse, puis tourbillon vers sa maman qui le serre dans ses bras ; le texte « Maintenant, c'est votre tour… » apparaît |
 
-Tout est calculé dans un seul shader (« raymarching » de volumes arrondis fondus les uns dans les autres) :
-les formes poussent et se transforment sans coupure, sans modèle 3D, sans image ni texture à télécharger.
+La 3D est calculée dans un seul shader (« raymarching » de volumes arrondis fondus les uns dans les autres) :
+les formes poussent et se transforment sans coupure, sans modèle 3D à télécharger.
 
 - La 3D se charge **après** le contenu (événement `load` puis temps libre du navigateur), seulement si WebGL 2
   est disponible, si « Réduire les animations » n'est pas activé et si le mode économie de données est coupé.
@@ -148,6 +148,9 @@ les formes poussent et se transforment sans coupure, sans modèle 3D, sans image
 - Réglages utiles en tête de fichier : `DAMPING` (inertie du scroll), `QUALITY`, la fonction `timeline` (à quel
   moment du scroll se passe chaque étape), `camAzimuth` (angle de la caméra), les poses `embryoPose`, `fetusPose`,
   `heldPose` et `momPose`. Les couleurs sont dans le shader (`background`, `shadeChild`, `shadeMom`).
+- Les trois photos de la fin se choisissent dans `src/content/photos.mjs` (`STORY_PHOTOS`, au format portrait de
+  préférence). Elles sont lues par WebGL depuis le CDN d'Unsplash, qui autorise le CORS ; une photo hébergée
+  ailleurs doit aussi l'autoriser. Si une photo ne se charge pas, le récit reste en 3D.
 - Aperçu de la scène seule, avec un curseur : `node src/serve.mjs 8080 --dev` puis
   `http://127.0.0.1:8080/tools/scene.html?p=0.95` (`&rtl` pour la mise en page hébreu).
 

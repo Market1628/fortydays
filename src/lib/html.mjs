@@ -1,5 +1,5 @@
 // Petits outils de génération HTML : échappement, icônes, images, prix, adresses.
-import { PHOTOS } from '../content/photos.mjs';
+import { PHOTOS, STORY_PHOTOS } from '../content/photos.mjs';
 
 export const esc = (value = '') => String(value)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -69,6 +69,18 @@ export function photo(key, lang, { ratio = [4, 5], widths = [480, 800, 1120], si
   </picture>${credit ? `
   <figcaption class="photo__credit">${ui.photo} <a href="${profile}" rel="noopener">${esc(p.author)}</a> / <a href="${page}" rel="noopener">Unsplash</a></figcaption>` : ''}
 </figure>`;
+}
+
+// Photos du récit de l'accueil, lues par WebGL depuis le CDN d'Unsplash (qui autorise le CORS), au format 4:5.
+export const storyPhotoUrls = () => STORY_PHOTOS.map(key => `${UNSPLASH}${PHOTOS[key].src}?fm=webp&fit=crop&crop=faces,entropy&w=800&h=1000&q=72`);
+
+// Crédit des photos du récit : « Photo : A, B et C / Unsplash ».
+export function storyCredit(ui) {
+  const names = STORY_PHOTOS.map(key => {
+    const p = PHOTOS[key];
+    return `<a href="https://unsplash.com/photos/${p.page}?utm_source=40days&amp;utm_medium=referral" rel="noopener">${esc(p.author)}</a>`;
+  });
+  return `${ui.photo} ${names.join(', ')} / <a href="https://unsplash.com/?utm_source=40days&amp;utm_medium=referral" rel="noopener">Unsplash</a>`;
 }
 
 // ---- Prix --------------------------------------------------------------------------------

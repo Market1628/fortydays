@@ -1,24 +1,24 @@
-// 40 Days — scène 3D de l'accueil : sculpture de verre en « raymarching » (WebGL 2, sans bibliothèque).
+// 40 Days — scène de l'accueil : verre nacré en « raymarching » (WebGL 2, sans bibliothèque), puis vraies
+// photographies, révélées et transformées dans une goutte de verre vivante.
 //
-// Toutes les formes sont des volumes calculés dans le shader et fondus les uns dans les autres
-// (fonctions de distance signée), ce qui permet de les faire pousser et se transformer sans
-// aucune coupure. Le récit suit les cinq chapitres de l'accueil :
-//   1. l'embryon, dans une bulle de verre irisée ; un petit cœur bat en lumière
-//   2. il prend forme : bras et jambes poussent, la queue se résorbe, la tête trouve ses proportions
-//   3. bébé grandit, lové ; des aurores colorées tournent autour de la bulle
-//   4. la naissance : la bulle éclate en gouttelettes irisées, bébé s'étire et tend les bras
-//   5. une maman de verre prismatique se condense dans la lumière, l'accueille et le serre dans ses bras
+// Le récit suit les cinq chapitres de l'accueil :
+//   1. une étincelle : des traits de lumière rejoignent une perle, qui se divise en 2, 4, 8 puis 16 cellules
+//   2. les cellules se rassemblent en embryon, un petit cœur bat en lumière, la bulle irisée l'enveloppe
+//   3. bébé grandit, lové ; des aurores colorées traversent le fond
+//   4. la naissance : la bulle se déchire en pétales, bébé s'étire, et la photo d'un vrai nouveau-né éclot
+//   5. fondus liquides : sa maman l'embrasse, puis le serre dans ses bras
 //
-// Le style reprend le verre du moteur « Premium 3D Glass » (irisation, dispersion, studio de lumière).
-// Module chargé par main.js après le contenu, seulement si WebGL 2 est disponible et que la
-// visiteuse n'a pas demandé à réduire les animations.
+// Les trois photos (Unsplash) arrivent par main.js (attribut data-photos du canvas ; source unique :
+// src/content/photos.mjs, clés STORY_PHOTOS). Module chargé après le contenu, seulement si WebGL 2 est
+// disponible et que la visiteuse n'a pas demandé à réduire les animations.
 
 // ---- Réglages -------------------------------------------------------------------------------------
 const FOV = 32;
-const DAMPING = 0.06;              // inertie du scroll
+const DAMPING = 0.075;             // inertie du scroll
 const QUALITY = { desktop: 0.72, mobile: 0.55, min: 0.42, max: 0.9 };   // résolution de rendu (adaptative)
-const YAW_REACH = -0.85;            // bébé qui s'étire : de trois-quarts face
-const CHILD_CONES = 19, MOM_CONES = 16, PARTICLES = 48;
+const YAW_REACH = -0.85;           // bébé qui s'étire : de trois-quarts face
+const PHOTO_ASPECT = 0.8;          // photos au format 4:5 (largeur / hauteur)
+const CHILD_CONES = 19, PARTICLES = 48;
 
 const clamp01 = v => Math.min(1, Math.max(0, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -28,25 +28,32 @@ const bell = (a, b, v) => Math.sin(Math.PI * clamp01((v - a) / (b - a)));
 // ---- Chronologie du récit (progression 0..1 sur les cinq chapitres) ---------------------------------
 function timeline(p) {
   return {
-    dev: smooth(0.04, 0.58, p),            // embryon -> fœtus à terme
-    limbs: smooth(0.16, 0.52, p),          // les membres poussent
-    grow: smooth(0.0, 0.6, p),             // taille dans la bulle
-    aurora: bell(0.36, 0.68, p),           // aurores autour de la bulle
-    tremble: bell(0.58, 0.67, p),          // la bulle frémit avant de céder
-    burst: smooth(0.64, 0.74, p),           // la bulle éclate
-    stretch: smooth(0.66, 0.76, p),        // bébé s'étire et tend les bras
-    mom: smooth(0.70, 0.84, p),            // la maman se forme
-    hold: smooth(0.79, 0.90, p),           // elle le prend dans ses bras
-    heart: 1 - smooth(0.58, 0.68, p),      // cœur lumineux pendant la grossesse
-    color: smooth(0.08, 0.45, p),          // intensité des couleurs
+    spark: smooth(0.0, 0.06, p),           // des traits de lumière rejoignent la perle
+    kick: bell(0.035, 0.09, p),            // éclat de la fécondation
+    divide: smooth(0.06, 0.2, p) * 4,      // 1 → 2 → 4 → 8 → 16 cellules
+    shape: smooth(0.19, 0.3, p),           // les cellules deviennent un embryon
+    dev: smooth(0.28, 0.56, p),            // embryon -> fœtus à terme
+    limbs: smooth(0.32, 0.54, p),          // les membres poussent
+    grow: smooth(0.0, 0.58, p),            // taille dans la bulle
+    aurora: bell(0.36, 0.66, p),           // aurores autour de la bulle
+    tremble: bell(0.55, 0.63, p),          // la bulle frémit avant de céder
+    burst: smooth(0.6, 0.7, p),            // la bulle se déchire en pétales
+    stretch: smooth(0.61, 0.69, p),        // bébé s'étire et tend les bras
+    reveal: smooth(0.645, 0.74, p),        // la photo du nouveau-né éclot
+    swap: smooth(0.79, 0.85, p) + smooth(0.89, 0.95, p),   // fondus vers les photos suivantes
+    heart: 1 - smooth(0.55, 0.65, p),      // cœur lumineux pendant la grossesse
+    color: smooth(0.04, 0.4, p),           // intensité des couleurs
     sun: smooth(0.0, 0.95, p),             // lever de soleil
-    flash: bell(0.67, 0.74, p)
+    flash: bell(0.63, 0.71, p)
   };
 }
 
-// Orbite de la caméra : tour lent pendant la grossesse, face à la naissance, trois-quarts pour la maman.
+// Recadrage lent de chaque photo (grossissement) : 1. recul, 2. approche, 3. recul qui dévoile la maman.
+const photoZoom = p => [lerp(1.26, 1.1, smooth(0.66, 0.86, p)), lerp(1.08, 1.2, smooth(0.8, 0.95, p)), lerp(1.3, 1.08, smooth(0.89, 1, p))];
+
+// Orbite de la caméra : tour lent pendant la grossesse, face à la naissance.
 function camAzimuth(p, T) {
-  return lerp(lerp(-0.3, 0.42, smooth(0, 0.6, p)), 0.05, T.burst) * (1 - T.mom) - 1.0 * T.mom;
+  return lerp(lerp(-0.3, 0.42, smooth(0, 0.6, p)), 0.05, T.burst);
 }
 
 // ---- Petits outils de géométrie ----------------------------------------------------------------------
@@ -74,6 +81,25 @@ function packCones(cones, apply, scale, out) {
     const len = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     if (len <= Math.abs(r1 - r2) + 0.004) { r1 = r2 = Math.max(r1, r2); if (len < 0.002) b[1] += 0.003; }
     out.set([a[0], a[1], a[2], Math.max(r1, 0.001), b[0], b[1], b[2], Math.max(r2, 0.001)], i * 8);
+  });
+}
+
+// ---- Les premières cellules ---------------------------------------------------------------------------
+// Chaque division double les cellules (axe x, puis y, puis z, puis diagonale) en conservant le volume :
+// l'amas reste compact, comme une petite framboise de perles. Les divisions arrivent par à-coups.
+const SPLIT_AXES = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [0.577, 0.577, -0.577]];
+function cellsPose(level) {
+  const L = Math.floor(level), f = level - L;
+  const e = l => (l < L ? 1 : l === L ? smooth(0.15, 0.85, f) : 0);
+  const E = e(0) + e(1) + e(2) + e(3);
+  const r = 0.3 * Math.pow(0.5, E / 3);
+  return Array.from({ length: CHILD_CONES }, (_, i) => {
+    const leaf = i % 16, c = [0, 0.05, 0];
+    for (let l = 0; l < 4; l++) {
+      const s = (leaf >> (3 - l)) & 1 ? 1 : -1, k = s * r * 0.95 * e(l);
+      c[0] += SPLIT_AXES[l][0] * k; c[1] += SPLIT_AXES[l][1] * k; c[2] += SPLIT_AXES[l][2] * k;
+    }
+    return ball(c, r);
   });
 }
 
@@ -142,63 +168,7 @@ function reachPose() {
   ];
 }
 
-// Blotti contre le cœur de sa maman : tête sur sa poitrine, mains contre elle, jambes repliées.
-function heldPose() {
-  return [
-    ball([0.05, 0.42, 0], 0.225),
-    cone([-0.02, 0.22, 0], [-0.05, 0.03, 0], 0.18, 0.2),
-    cone([-0.05, 0.03, 0], [-0.04, -0.17, 0], 0.2, 0.2),
-    cone([-0.04, -0.17, 0], [0.02, -0.29, 0], 0.19, 0.18),
-    cone([0.02, -0.29, 0], [0.05, -0.3, 0], 0.18, 0.17),
-    cone([0.03, 0.1, 0], [0.04, -0.1, 0], 0.17, 0.17),
-    cone([0.0, 0.17, 0.17], [0.16, 0.06, 0.2], 0.07, 0.06), cone([0.0, 0.17, -0.17], [0.16, 0.06, -0.2], 0.07, 0.06),
-    cone([0.16, 0.06, 0.2], [0.24, 0.26, 0.11], 0.06, 0.05), cone([0.16, 0.06, -0.2], [0.24, 0.24, -0.11], 0.06, 0.05),
-    ball([0.24, 0.26, 0.11], 0.055), ball([0.24, 0.24, -0.11], 0.055),
-    cone([0.02, -0.24, 0.11], [0.26, -0.22, 0.14], 0.1, 0.075), cone([0.02, -0.24, -0.11], [0.26, -0.24, -0.14], 0.1, 0.075),
-    cone([0.26, -0.22, 0.14], [0.12, -0.42, 0.12], 0.07, 0.05), cone([0.26, -0.24, -0.14], [0.12, -0.44, -0.12], 0.07, 0.05),
-    cone([0.12, -0.42, 0.12], [0.2, -0.47, 0.1], 0.05, 0.04), cone([0.12, -0.44, -0.12], [0.2, -0.49, -0.1], 0.05, 0.04),
-    cone([0.0, -0.29, 0], [0.01, -0.29, 0], 0.02, 0.02)
-  ];
-}
-
-// ---- La maman (repère local : poitrine à l'origine, regard vers +z) ------------------------------------
-// 16 volumes : 0 tête · 1 chevelure · 2 chignon · 3 cou · 4-5 épaules · 6 buste ·
-// 7-8 bras · 9-10 avant-bras · 11-12 mains · 13 menton · 14 nez · 15 taille.
-function momFace(cradle) {
-  const head = cradle ? [-0.07, 0.87, 0.12] : [0.0, 0.93, 0.09];
-  const f = cradle ? [-0.12, -0.72, 0.68] : [0.0, -0.22, 0.975];      // regard : vers son bébé
-  return { head, f };
-}
-function momPose(cradle) {
-  const { head, f } = momFace(cradle);
-  const at = (k, dx = 0, dy = 0, dz = 0) => [head[0] + f[0] * k + dx, head[1] + f[1] * k + dy, head[2] + f[2] * k + dz];
-  // Bras ouverts pour accueillir, puis refermés autour du bébé : main droite dans son dos, gauche sous lui.
-  const shR = [-0.3, 0.5, 0.0], shL = [0.3, 0.5, 0.0];
-  const elR = cradle ? [-0.43, 0.22, 0.25] : [-0.4, 0.2, 0.34], elL = cradle ? [0.37, 0.15, 0.2] : [0.4, 0.2, 0.34];
-  const wrR = cradle ? [-0.22, 0.38, 0.53] : [-0.22, 0.3, 0.7], wrL = cradle ? [0.05, 0.15, 0.46] : [0.22, 0.3, 0.7];
-  const tipR = cradle ? [-0.06, 0.45, 0.55] : [-0.13, 0.34, 0.84], tipL = cradle ? [-0.1, 0.17, 0.46] : [0.13, 0.34, 0.84];
-  return [
-    cone(at(-0.03, 0, 0.05, 0), at(0.03, 0, -0.05, 0), 0.15, 0.142),            // tête, ovale du visage
-    cone(at(-0.04, 0, 0.045, 0), at(-0.09, 0, 0.0, 0), 0.152, 0.148),           // chevelure (sommet et arrière)
-    ball(at(-0.2, 0, 0.07, 0), 0.098),                                           // chignon, derrière la tête
-    cone([0.0, 0.58, -0.01], [0.0, 0.78, 0.04], 0.062, 0.056),                   // cou
-    cone([-0.02, 0.6, -0.02], shR, 0.07, 0.085),                                 // épaule droite, tombante
-    cone([0.02, 0.6, -0.02], shL, 0.07, 0.085),                                  // épaule gauche
-    cone([0.0, 0.44, 0.02], [0.0, 0.18, 0.04], 0.2, 0.185),                      // buste
-    cone(shR, elR, 0.07, 0.058), cone(shL, elL, 0.07, 0.058),
-    cone(elR, wrR, 0.058, 0.046), cone(elL, wrL, 0.058, 0.046),
-    cone(wrR, tipR, 0.046, 0.034), cone(wrL, tipL, 0.046, 0.034),
-    cone(at(0.06, 0, -0.085, 0), at(0.09, 0, -0.1, 0), 0.06, 0.05),              // menton
-    ball(at(0.148, 0, -0.025, 0), 0.036),                                        // nez
-    cone([0.0, 0.16, 0.0], [0.0, -0.14, 0.0], 0.18, 0.19)                        // taille, qui se fond dans la lumière
-  ];
-}
-
-const POSES = {
-  embryo: embryoPose(), fetus: fetusPose(), reach: reachPose(), held: heldPose(),
-  momOpen: momPose(false), momCradle: momPose(true)
-};
-const MOM_ORIGIN = [0.1, -0.29, -0.36];   // le bébé blotti (−0.1, 0.42, 0.36) se trouve alors en (0, 0.13, 0)
+const POSES = { embryo: embryoPose(), fetus: fetusPose(), reach: reachPose() };
 
 // ---- Shaders ----------------------------------------------------------------------------------------------
 const VERT = `#version 300 es
@@ -218,33 +188,42 @@ uniform mat3 uCamRot;
 uniform float uTanHalf;
 uniform vec2 uShift;
 uniform vec4 uChild[${CHILD_CONES * 2}];
-uniform vec4 uMom[${MOM_CONES * 2}];
 uniform vec4 uChildBound;
-uniform vec4 uMomBound;
-uniform vec4 uSceneBound;
-uniform float uMomForm;
-uniform float uMomBaseY;
+uniform float uChildK;
+uniform float uCell;
+uniform float uScene;
 uniform vec4 uBubble;
 uniform float uBubbleA;
 uniform float uBurst;
 uniform float uFlow;
 uniform vec4 uHeart;
-uniform float uHeartGold;
 uniform vec4 uPart[${PARTICLES}];
 uniform vec2 uSun;
 uniform float uSunK;
 uniform float uColorK;
 uniform float uFlash;
 uniform float uGlow;
-uniform float uChildK;
-uniform vec3 uHeadPos;
-uniform vec3 uFaceDir;
+uniform sampler2D uPhoto0;
+uniform sampler2D uPhoto1;
+uniform sampler2D uPhoto2;
+uniform float uReveal;
+uniform float uSwap;
+uniform vec3 uZoom;
+uniform vec2 uPhotoC;
+uniform float uPhotoR;
 
 #define PI 3.14159265
 
 vec3 lin(vec3 c) { return c * c * (c * 0.305306 + 0.682171) + c * 0.012522; }
 // Irisation « maison » : rose → lavande → aqua → or, sans le vert criard d'un arc-en-ciel complet.
 vec3 film(float t) { return lin(vec3(0.8, 0.72, 0.75) + vec3(0.2, 0.2, 0.25) * cos(6.2831853 * (t + vec3(0.125, 0.4, 0.65)))); }
+
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash2(i), hash2(i + vec2(1.0, 0.0)), f.x), mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; } return s; }
 
 float smin(float a, float b, float k) { float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
 
@@ -267,37 +246,14 @@ float mapChild(vec3 p) {
   return d;
 }
 
-float wisp(vec3 p) { return sin(p.x * 7.0 + uTime * 1.3) * sin(p.y * 6.0 - uTime * 0.9) * sin(p.z * 8.0 + uTime * 1.1); }
-
-float mapMom(vec3 p) {
-  float d = 1e5;
-  for (int i = 0; i < ${MOM_CONES}; i++) {
-    vec4 A = uMom[2 * i], B = uMom[2 * i + 1];
-    d = smin(d, sdRoundCone(p, A.xyz, B.xyz, A.w, B.w), i < 3 ? 0.035 : 0.07);
-  }
-  float f = uMomForm;
-  d += (1.0 - f) * 0.5 + wisp(p) * 0.1 * (1.0 - f);
-  // La sculpture se fond dans la lumière vers la taille.
-  float cut = uMomBaseY + 0.03 - p.y;
-  float hk = max(0.05 - abs(d - cut), 0.0) / 0.05;
-  d = max(d, cut) + hk * hk * 0.0125;
-  return d;
-}
-
-vec2 map(vec3 p) {
-  float dc = length(p - uChildBound.xyz) - uChildBound.w;
-  if (dc < 0.2) dc = mapChild(p);
-  float dm = 1e5;
-  if (uMomForm > 0.002) {
-    dm = length(p - uMomBound.xyz) - uMomBound.w;
-    if (dm < 0.2) dm = mapMom(p);
-  }
-  return dc < dm ? vec2(dc, 1.0) : vec2(dm, 2.0);
+float map(vec3 p) {
+  float d = length(p - uChildBound.xyz) - uChildBound.w;
+  return d < 0.2 ? mapChild(p) : d;
 }
 
 vec3 normalAt(vec3 p) {
   const vec2 e = vec2(1.0, -1.0) * 0.0018;
-  return normalize(e.xyy * map(p + e.xyy).x + e.yyx * map(p + e.yyx).x + e.yxy * map(p + e.yxy).x + e.xxx * map(p + e.xxx).x);
+  return normalize(e.xyy * map(p + e.xyy) + e.yyx * map(p + e.yyx) + e.yxy * map(p + e.yxy) + e.xxx * map(p + e.xxx));
 }
 
 vec2 iSphere(vec3 ro, vec3 rd, vec4 s) {
@@ -352,7 +308,7 @@ vec3 background(vec2 uv) {
   return col;
 }
 
-// L'enfant : nacre rosée, lumière intérieure dorée, cœur qui bat, reflets irisés.
+// L'enfant : nacre rosée (perles plus lumineuses au stade des cellules), lumière intérieure, cœur qui bat.
 vec3 shadeChild(vec3 p, vec3 n, vec3 rd) {
   vec3 v = -rd;
   float ndv = clamp(dot(n, v), 0.0, 1.0);
@@ -361,63 +317,16 @@ vec3 shadeChild(vec3 p, vec3 n, vec3 rd) {
   float wrap = clamp((dot(n, L) + 0.6) / 1.6, 0.0, 1.0);
   float s1 = mapChild(p - n * 0.04), s2 = mapChild(p - n * 0.12);
   float thin = clamp(0.55 + (s1 + s2) * 3.2, 0.0, 1.0);
-  vec3 pearl = lin(vec3(0.98, 0.72, 0.66));
+  vec3 pearl = mix(lin(vec3(0.98, 0.72, 0.66)), lin(vec3(1.0, 0.84, 0.8)), uCell);
   vec3 col = pearl * (0.32 + 0.68 * wrap);
   col += lin(vec3(1.0, 0.6, 0.45)) * thin * (0.45 + 0.75 * uGlow);
   col += lin(vec3(0.78, 0.66, 1.0)) * clamp(dot(n, normalize(vec3(0.8, 0.1, 0.4))), 0.0, 1.0) * 0.18;
   float hd = length(p - uHeart.xyz);
-  vec3 heartCol = mix(lin(vec3(1.0, 0.38, 0.34)), lin(vec3(1.0, 0.7, 0.45)), uHeartGold);
-  col += heartCol * exp(-hd * hd * mix(14.0, 30.0, uHeartGold)) * uHeart.w * mix(1.6, 0.7, uHeartGold);
+  col += lin(vec3(1.0, 0.38, 0.34)) * exp(-hd * hd * 14.0) * uHeart.w * 1.6;
   vec3 R = reflect(rd, n);
   col += env(R) * fres * 0.55;
-  col += film(fres * 1.3 + dot(n, vec3(0.3, 0.5, 0.2)) + uTime * 0.03) * fres * 0.55;
+  col += film(fres * 1.3 + dot(n, vec3(0.3, 0.5, 0.2)) + uTime * 0.03) * fres * (0.55 + 0.5 * uCell);
   col += pow(clamp(dot(R, L), 0.0, 1.0), 40.0) * 0.8;
-  return col;
-}
-
-// La maman : verre clair prismatique (dispersion), lumière intérieure douce, liseré arc-en-ciel.
-vec3 shadeMom(vec3 p, vec3 n, vec3 rd, vec2 uv) {
-  vec3 v = -rd;
-  float ndv = clamp(dot(n, v), 0.0, 1.0);
-  float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
-  vec3 right = uCamRot[0], up = uCamRot[1];
-  vec3 rR = refract(rd, n, 1.0 / 1.38), rG = refract(rd, n, 1.0 / 1.43), rB = refract(rd, n, 1.0 / 1.49);
-  vec2 oR = vec2(dot(rR - rd, right), dot(rR - rd, up)) * 0.28;
-  vec2 oG = vec2(dot(rG - rd, right), dot(rG - rd, up)) * 0.28;
-  vec2 oB = vec2(dot(rB - rd, right), dot(rB - rd, up)) * 0.28;
-  vec3 refr = vec3(background(uv + oR).r, background(uv + oG).g, background(uv + oB).b);
-  vec3 L = normalize(vec3(-0.5, 0.7, 0.6));
-  float wrap = clamp((dot(n, L) + 0.7) / 1.7, 0.0, 1.0);
-  vec3 opal = lin(vec3(0.99, 0.91, 0.93));
-  vec3 col = mix(refr * lin(vec3(1.0, 0.86, 0.9)), opal, 0.5) * (0.62 + 0.38 * wrap);
-  // jeu de couleurs de l'opale
-  float play = 0.5 + 0.5 * sin(dot(p, vec3(5.0, 7.0, 3.0)) + uTime * 0.35) + dot(n, vec3(0.25, 0.6, 0.2));
-  col += (film(play * 0.7 + ndv * 0.5) - 0.6) * 0.45;
-  float s1 = mapMom(p - n * 0.07);
-  float thin = clamp(0.6 + s1 * 6.0, 0.0, 1.0);
-  col += lin(vec3(1.0, 0.8, 0.7)) * (0.06 + 0.16 * thin);
-  // le bébé illumine sa maman de l'intérieur
-  float bd = length(p - uChildBound.xyz);
-  col += lin(vec3(1.0, 0.64, 0.6)) * exp(-bd * bd * 5.0) * 0.4 * uMomForm;
-  // chevelure : verre caramel rosé, distinct du visage
-  float hair = 0.0;
-  for (int i = 0; i < 2; i++) {
-    int k = i == 0 ? 1 : 2;
-    vec4 A = uMom[2 * k], B = uMom[2 * k + 1];
-    hair = max(hair, 1.0 - smoothstep(-0.01, 0.025, sdRoundCone(p, A.xyz, B.xyz, A.w, B.w)));
-  }
-  vec3 hp = p - uHeadPos;
-  float face = smoothstep(0.15, 0.55, dot(normalize(hp), uFaceDir)) * (1.0 - smoothstep(0.17, 0.24, length(hp)));
-  hair *= 1.0 - face;
-  vec3 hairCol = lin(vec3(0.66, 0.38, 0.32)) * (0.45 + 0.55 * wrap) + film(dot(n, vec3(0.2, 0.9, 0.3)) * 0.6 + uTime * 0.02) * 0.08;
-  col = mix(col, hairCol, hair * 0.9);
-  vec3 R = reflect(rd, n);
-  col = mix(col, env(R), fres * 0.6 * (1.0 - hair * 0.5));
-  col += film(ndv * 1.7 + p.y * 0.45 + uTime * 0.03) * pow(1.0 - ndv, 2.0) * 0.65;
-  // liseré doré du contre-jour (le soleil est derrière elle)
-  col += lin(vec3(1.0, 0.78, 0.5)) * pow(1.0 - ndv, 3.0) * smoothstep(-0.2, 0.6, n.y + 0.3) * 0.45 * uMomForm;
-  col += pow(clamp(dot(R, L), 0.0, 1.0), 60.0) * 0.7;
-  col += film(p.y * 1.4 - uTime * 0.25) * (1.0 - uMomForm) * 1.1 * (0.35 + 0.65 * pow(1.0 - ndv, 1.4));
   return col;
 }
 
@@ -457,7 +366,74 @@ vec4 bubble(vec3 ro, vec3 rd, float tHit) {
   return vec4((f.rgb * f.a + b.rgb * b.a * (1.0 - f.a)) / max(A, 1e-4), A);
 }
 
-// Particules de lumière : poussière, aurores, gouttelettes, puis spirale qui dessine la maman.
+// ---- Les photographies, dans une goutte de verre vivante ----
+// q : position dans la goutte (rayon 1 = demi-hauteur), zoom : recadrage lent.
+vec3 photoAt(int k, vec2 q, float zoom) {
+  vec2 uv = vec2(0.5 + q.x * 0.5 / (${PHOTO_ASPECT.toFixed(3)} * zoom), 0.5 - q.y * 0.5 / zoom);
+  vec3 c = k == 0 ? texture(uPhoto0, uv).rgb : (k == 1 ? texture(uPhoto1, uv).rgb : texture(uPhoto2, uv).rgb);
+  return lin(c);
+}
+// Près du bord, le verre courbe la lumière : léger effet de loupe et dispersion des couleurs.
+vec3 photoGlass(int k, vec2 q, float zoom, float edge) {
+  float s = edge * edge * 0.09;
+  return vec3(photoAt(k, q * (1.0 - s * 0.6), zoom).r, photoAt(k, q * (1.0 - s), zoom).g, photoAt(k, q * (1.0 - s * 1.45), zoom).b);
+}
+// Passage d'une photo à la suivante : 1 → 2 en encre lumineuse qui gagne depuis le centre,
+// 2 → 3 en tourbillon qui dévoile la dernière image en spirale.
+vec3 photoMix(vec2 q, float edge) {
+  float s = clamp(uSwap, 0.0, 2.0);
+  int k = s < 1.0 ? 0 : 1;
+  float t = s - float(k);
+  float zA = k == 0 ? uZoom.x : uZoom.y, zB = k == 0 ? uZoom.y : uZoom.z;
+  if (t < 0.001) return photoGlass(k, q, zA, edge);
+  if (t > 0.999) return photoGlass(k + 1, q, zB, edge);
+  float r = length(q), a = atan(q.y, q.x);
+  float n = fbm(q * 2.3 + float(k) * 7.0 + uTime * 0.05);
+  vec2 dq; float f, th;
+  if (k == 0) {
+    f = n * 0.7 + r * 0.42; th = t * 1.25 - 0.02;
+    dq = (vec2(fbm(q * 3.1 + 3.0), fbm(q * 3.1 + 9.0)) - 0.5) * 0.4;
+  } else {
+    f = r * 0.8 + 0.12 * sin(a * 3.0 + r * 9.0) + n * 0.22; th = t * 1.4 - 0.08;
+    float sw = sin(PI * t) * (1.3 - min(r, 1.3)) * 1.8;
+    dq = vec2(cos(a + sw), sin(a + sw)) * r - q;
+  }
+  vec3 A = photoGlass(k, q + dq * t, zA, edge);
+  vec3 B = photoGlass(k + 1, q - dq * (1.0 - t), zB, edge);
+  float m = 1.0 - smoothstep(th - 0.045, th + 0.045, f);
+  vec3 col = mix(A, B, m);
+  float front = exp(-pow((f - th) / 0.03, 2.0)) * sin(PI * t);
+  return col + film(f * 3.0 + uTime * 0.2) * front * 1.5;
+}
+vec3 photoOver(vec3 base, vec2 px) {
+  vec2 q = (px - uPhotoC) / uPhotoR;
+  float ang = atan(q.y, q.x);
+  float wob = 0.03 * sin(3.0 * ang + uTime * 0.6) + 0.02 * sin(5.0 * ang - uTime * 0.45) + 0.012 * sin(9.0 * ang + uTime * 0.8);
+  float rough = (fbm(q * 2.6 + uTime * 0.25) - 0.5) * 0.7 * (1.0 - uReveal);
+  float d = length(q / vec2(0.84, 1.0)) - (1.0 + wob + rough) * uReveal;
+  float aa = 1.6 / uPhotoR;
+  float alpha = 1.0 - smoothstep(-aa, aa, d);
+  float edge = smoothstep(-0.24, 0.0, d);
+  // dehors : ombre rosée et halo irisé autour de la goutte
+  float o = max(d, 0.0);
+  vec3 col = mix(base, base * lin(vec3(0.92, 0.78, 0.76)), exp(-o * 8.0) * 0.38 * uReveal);
+  col += film(ang * 0.16 + uTime * 0.04) * exp(-o * 15.0) * 0.2 * uReveal;
+  if (alpha > 0.0) {
+    vec3 inside = photoMix(q, edge);
+    inside = mix(inside, inside * lin(vec3(1.0, 0.9, 0.88)), edge * 0.45);
+    // reflets du verre : une fenêtre de lumière en haut à gauche, un filet en bas à droite
+    float dirL = dot(normalize(q + 1e-4), normalize(vec2(-0.62, 0.78)));
+    inside += smoothstep(0.82, 1.0, dirL) * smoothstep(-0.16, -0.03, d) * (1.0 - smoothstep(-0.03, 0.0, d)) * 0.35;
+    inside += smoothstep(0.9, 1.0, -dirL) * smoothstep(-0.07, -0.01, d) * 0.18;
+    // à l'éclosion, la goutte est encore pleine de lumière
+    inside += film(d * 6.0 + uTime * 0.3) * edge * (1.0 - uReveal) * 1.4;
+    col = mix(col, inside, alpha);
+  }
+  float rim = exp(-pow(d / 0.016, 2.0)) * uReveal;
+  return mix(col, film(ang * 0.32 + uTime * 0.06 + q.y * 0.4) * 1.35, rim * 0.7);
+}
+
+// Particules de lumière : étincelles, poussière, aurores, gouttelettes.
 vec3 particles(vec3 ro, vec3 rd, float tMax) {
   vec3 acc = vec3(0.0);
   for (int i = 0; i < ${PARTICLES}; i++) {
@@ -485,33 +461,34 @@ void main() {
 
   vec3 col = background(uv);
   float tHit = 1e5;
-  vec2 tb = iSphere(ro, rd, uSceneBound);
-  if (tb.y > 0.0) {
-    float t = max(tb.x, 0.0);
-    float mat = 0.0;
-    for (int i = 0; i < 110; i++) {
-      if (t > tb.y) break;
-      vec2 h = map(ro + rd * t);
-      if (h.x < 0.0011 * t + 0.0004) { mat = h.y; break; }
-      t += h.x * 0.88;
+  if (uScene > 0.5) {
+    vec2 tb = iSphere(ro, rd, uChildBound);
+    if (tb.y > 0.0) {
+      float t = max(tb.x, 0.0);
+      bool hit = false;
+      for (int i = 0; i < 110; i++) {
+        if (t > tb.y) break;
+        float h = map(ro + rd * t);
+        if (h < 0.0011 * t + 0.0004) { hit = true; break; }
+        t += h * 0.88;
+      }
+      if (hit) {
+        vec3 p = ro + rd * t;
+        col = shadeChild(p, normalAt(p), rd);
+        tHit = t;
+      }
     }
-    if (mat > 0.5) {
-      vec3 p = ro + rd * t;
-      vec3 n = normalAt(p);
-      col = mat < 1.5 ? shadeChild(p, n, rd) : shadeMom(p, n, rd, uv);
-      tHit = t;
+    // Halo du cœur, visible à travers le corps.
+    if (uHeart.w > 0.01) {
+      vec3 op = uHeart.xyz - ro; float t = dot(op, rd);
+      float d2 = max(dot(op, op) - t * t, 0.0);
+      col += lin(vec3(1.0, 0.45, 0.4)) * exp(-d2 * 45.0) * 0.3 * uHeart.w;
     }
+    vec4 b = bubble(ro, rd, tHit);
+    col = col * (1.0 - b.a * 0.4) + b.rgb * b.a;
   }
-  // Halo du cœur, visible à travers le corps.
-  if (uHeart.w > 0.01) {
-    vec3 op = uHeart.xyz - ro; float t = dot(op, rd);
-    float d2 = max(dot(op, op) - t * t, 0.0);
-    vec3 hc = mix(lin(vec3(1.0, 0.45, 0.4)), lin(vec3(1.0, 0.82, 0.5)), uHeartGold);
-    col += hc * (exp(-d2 * 45.0) * 0.3 + exp(-d2 * 6.0) * 0.12 * uHeartGold) * uHeart.w;
-  }
+  if (uReveal > 0.001) { col = photoOver(col, uv * uRes); tHit = 1e5; }
   col += particles(ro, rd, tHit);
-  vec4 b = bubble(ro, rd, tHit);
-  col = col * (1.0 - b.a * 0.4) + b.rgb * b.a;
   float fd = length((uv - uSun) * vec2(asp, 1.0));
   col += lin(vec3(1.0, 0.8, 0.72)) * uFlash * (exp(-fd * fd * 9.0) * 0.26 + 0.02);
   col = col / (1.0 + max(col - 0.92, 0.0) * 1.6);
@@ -519,7 +496,7 @@ void main() {
 }`;
 
 // ---- La scène --------------------------------------------------------------------------------------------
-export function createHomeScene({ canvas, rtl = false, mobile = false, onHeld } = {}) {
+export function createHomeScene({ canvas, rtl = false, mobile = false, photos = [], onHeld } = {}) {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance' });
   if (!gl) throw new Error('WebGL 2 indisponible');
 
@@ -545,12 +522,37 @@ export function createHomeScene({ canvas, rtl = false, mobile = false, onHeld } 
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
   const U = {};
-  ['uRes', 'uTime', 'uCamPos', 'uCamRot', 'uTanHalf', 'uShift', 'uChild', 'uMom', 'uChildBound', 'uMomBound', 'uSceneBound',
-    'uMomForm', 'uMomBaseY', 'uChildK', 'uHeadPos', 'uFaceDir', 'uBubble', 'uBubbleA', 'uBurst', 'uFlow', 'uHeart', 'uHeartGold', 'uPart', 'uSun', 'uSunK', 'uColorK', 'uFlash', 'uGlow']
+  ['uRes', 'uTime', 'uCamPos', 'uCamRot', 'uTanHalf', 'uShift', 'uChild', 'uChildBound', 'uChildK', 'uCell', 'uScene',
+    'uBubble', 'uBubbleA', 'uBurst', 'uFlow', 'uHeart', 'uPart', 'uSun', 'uSunK', 'uColorK', 'uFlash', 'uGlow',
+    'uPhoto0', 'uPhoto1', 'uPhoto2', 'uReveal', 'uSwap', 'uZoom', 'uPhotoC', 'uPhotoR']
     .forEach(name => { U[name] = gl.getUniformLocation(program, name); });
+  [0, 1, 2].forEach(k => gl.uniform1i(U['uPhoto' + k], k));
+
+  // ---- Les photographies (chargées tout de suite, en parallèle de la 3D) ----
+  const photoReady = [0, 0, 0];
+  const loadPhoto = (url, k) => new Promise(resolve => {
+    if (!url) return resolve(false);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.decoding = 'async';
+    img.onload = () => {
+      gl.activeTexture(gl.TEXTURE0 + k);
+      gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      photoReady[k] = 1;
+      resolve(true);
+    };
+    img.onerror = () => { console.warn('[40 Days] Photo du récit indisponible :', url); resolve(false); };
+    img.src = url;
+  });
+  const ready = Promise.all([0, 1, 2].map(k => loadPhoto(photos[k], k))).then(() => true);
 
   const childData = new Float32Array(CHILD_CONES * 8);
-  const momData = new Float32Array(MOM_CONES * 8);
   const partData = new Float32Array(PARTICLES * 4);
   const seeds = Array.from({ length: PARTICLES }, (_, i) => {
     const r = n => (Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1;
@@ -571,67 +573,57 @@ export function createHomeScene({ canvas, rtl = false, mobile = false, onHeld } 
     const T = timeline(p);
     const introK = smooth(0, 1, intro);
 
-    // --- l'enfant ---
+    // --- l'enfant : cellules, embryon, fœtus, puis bébé qui s'étire ---
     const growPose = lerpPose(POSES.embryo, POSES.fetus, T.dev);
-    // les membres poussent un peu après le corps
-    const limbsPose = lerpPose(POSES.embryo, POSES.fetus, T.limbs);
+    const limbsPose = lerpPose(POSES.embryo, POSES.fetus, T.limbs);     // les membres poussent un peu après le corps
     const devPose = growPose.map((c, i) => (i >= 6 && i <= 17 ? limbsPose[i] : c));
-    const openPose = lerpPose(devPose, POSES.reach, T.stretch * (1 - T.hold));
-    const pose = lerpPose(openPose, POSES.held, T.hold);
-    const scale = lerp(lerp(0.85, 1.12, T.grow), 0.92, T.stretch) * lerp(1, 0.6 / 0.92, T.hold) * lerp(0.82, 1, introK);
-    const float = Math.sin(time * 0.6) * 0.025 * (1 - T.hold);
+    const formed = lerpPose(cellsPose(T.divide), devPose, T.shape);
+    const pose = lerpPose(formed, POSES.reach, T.stretch);
+    const scale = lerp(lerp(0.85, 1.12, T.grow), 0.92, T.stretch) * lerp(0.82, 1, introK) * lerp(0.75, 1, T.spark);
+    const float = Math.sin(time * 0.6) * 0.025;
     const pos = [0, 0.05 + float + T.stretch * 0.08, 0];
-    // l'enfant se montre surtout de profil, en tournant doucement pour révéler son volume
     const camAz = camAzimuth(p, T);
-    const yaw = lerp((camAz + 0.38 * Math.sin(time * 0.22 + p * 6)) * (1 - T.stretch) + (camAz + YAW_REACH) * T.stretch, Math.PI / 2, T.hold);
-    const pitch = 0.08 * Math.sin(time * 0.2) * (1 - T.hold);
-    const roll = lerp(0.1 * Math.sin(time * 0.17) * (1 - T.stretch), 0.12, T.hold);
-    const breathe = 1 + Math.sin(time * 1.7) * 0.012 * T.hold;
-    packCones(pose, transformer(pos, pitch, yaw, roll, scale * breathe), scale, childData);
+    // les cellules tournent sur elles-mêmes ; l'enfant se montre ensuite de profil, en tournant doucement
+    const spin = time * 0.3 + p * 14;
+    const lazy = camAz + 0.38 * Math.sin(time * 0.22 + p * 6);
+    const yaw = lerp(lerp(spin, lazy, T.shape), camAz + YAW_REACH, T.stretch);
+    const pitch = 0.08 * Math.sin(time * 0.2) + (1 - T.shape) * 0.35 * Math.sin(time * 0.17 + p * 5);
+    const roll = 0.1 * Math.sin(time * 0.17) * (1 - T.stretch);
+    packCones(pose, transformer(pos, pitch, yaw, roll, scale), scale, childData);
 
-    // --- la maman ---
-    const momPoseNow = lerpPose(POSES.momOpen, POSES.momCradle, T.hold);
-    packCones(momPoseNow, transformer(MOM_ORIGIN, 0, 0, 0, 1), 1, momData);
-
-    // --- la bulle ---
-    const bubbleR = lerp(0.74, 1.04, T.grow) * (1 + T.burst * 0.12) * (1 + Math.sin(time * 14) * 0.012 * T.tremble) * lerp(0.9, 1, introK);
+    // --- la bulle (la membrane de la première cellule, puis la poche des eaux) ---
+    const bubbleR = lerp(0.56, 1.04, T.grow) * (1 + T.burst * 0.12) * (1 + Math.sin(time * 14) * 0.012 * T.tremble) * lerp(0.9, 1, introK);
     const bubbleA = introK * (1 - smooth(0.85, 1, T.burst));
 
     // --- particules ---
-    const chestA = childData.subarray(5 * 8, 5 * 8 + 3);
+    const ry = (v, a) => [v[0] * Math.cos(a) - v[2] * Math.sin(a), v[1], v[0] * Math.sin(a) + v[2] * Math.cos(a)];
     for (let i = 0; i < PARTICLES; i++) {
       const s = seeds[i];
       let x, y, z, w;
-      if (i < 16) {                                  // poussière de lumière
+      if (i < 10 && T.spark < 1) {                   // étincelles : elles rejoignent la perle en spirale
+        const rad = lerp(1.7 + s.c * 0.6, 0, Math.pow(T.spark, 1.4));
+        [x, y, z] = ry([s.dir[0] * rad, s.dir[1] * rad * 0.7, s.dir[2] * rad], time * 0.4 + T.spark * 4 + s.b * 6.28);
+        y += pos[1];
+        w = (0.022 + 0.02 * s.a) * (1 - smooth(0.8, 1, T.spark)) * introK;
+      } else if (i < 16) {                           // poussière de lumière
         const ang = time * (0.05 + s.a * 0.08) + s.b * 6.28;
         const rad = 1.15 + s.c * 0.9;
         x = Math.cos(ang) * rad; z = Math.sin(ang) * rad * 0.7; y = Math.sin(time * 0.2 + s.a * 6.28) * 0.8 + (s.b - 0.5) * 0.6;
-        w = 0.016 + s.c * 0.016;
+        w = (0.016 + s.c * 0.016) * (i < 10 ? smooth(0.07, 0.12, p) : 1);
       } else if (i < 32) {                           // aurores autour de la bulle
         const ang = time * 0.7 + i * 0.39 + p * 9;
         const h = Math.sin(time * 0.5 + i * 0.8) * 0.7;
         const rad = bubbleR * (1.12 + 0.08 * Math.sin(i + time));
-        x = Math.cos(ang) * rad * Math.sqrt(1 - Math.min(h * h, 0.9)); z = Math.sin(ang) * rad * Math.sqrt(1 - Math.min(h * h, 0.9)); y = 0.05 + h * rad;
-        w = 0.03 * T.aurora + 0.045 * T.mom * (1 - T.mom) * 2;
-        // pendant la formation de la maman, elles convergent vers sa silhouette
-        if (T.mom > 0) {
-          const k = (i - 16) % MOM_CONES, tgt = momData.subarray(k * 8 + ((i & 1) ? 4 : 0), k * 8 + ((i & 1) ? 7 : 3));
-          const f = smooth(0, 1, T.mom);
-          x = lerp(x, tgt[0], f); y = lerp(y, tgt[1], f); z = lerp(z, tgt[2], f);
-        }
-      } else {                                       // gouttelettes de la bulle, puis spirale vers la maman
+        const k = Math.sqrt(1 - Math.min(h * h, 0.9));
+        x = Math.cos(ang) * rad * k; z = Math.sin(ang) * rad * k; y = 0.05 + h * rad;
+        w = 0.03 * T.aurora;
+      } else {                                       // gouttelettes de la bulle, puis lucioles autour des photos
         // chaque gouttelette se détache quand la déchirure passe sur elle, puis s'envole
         const loc = clamp01((T.burst * 1.5 - 0.12 - (0.5 - 0.5 * s.dir[1])) / 0.45);
         const out = bubbleR * (1 + loc * (0.35 + s.a * 1.1));
-        x = s.dir[0] * out; y = 0.05 + s.dir[1] * out + loc * (0.15 + s.b * 0.25); z = s.dir[2] * out;
-        w = (0.035 + s.c * 0.035) * Math.sin(Math.PI * loc);
-        if (T.mom > 0) {
-          const k = (i - 32) % MOM_CONES, tgt = momData.subarray(k * 8, k * 8 + 3);
-          const f = smooth(0, 1, T.mom), swirl = (1 - f) * 2.4 + time * 0.3;
-          const sx = x * Math.cos(swirl) - z * Math.sin(swirl), sz = x * Math.sin(swirl) + z * Math.cos(swirl);
-          x = lerp(sx, tgt[0], f); y = lerp(y, tgt[1], f); z = lerp(sz, tgt[2], f);
-          w = Math.max(w, 0.035 * Math.sin(Math.PI * T.mom));
-        }
+        [x, y, z] = ry([s.dir[0] * out, s.dir[1] * out, s.dir[2] * out], time * 0.05 * T.reveal);
+        y += 0.05 + loc * (0.15 + s.b * 0.25);
+        w = Math.max((0.035 + s.c * 0.035) * Math.sin(Math.PI * loc), 0.02 * T.reveal * (0.55 + 0.45 * Math.sin(time * 1.7 + i)));
       }
       partData.set([x, y, z, w], i * 4);
     }
@@ -639,7 +631,7 @@ export function createHomeScene({ canvas, rtl = false, mobile = false, onHeld } 
     // --- caméra et cadrage ---
     const aspect = size.w / size.h;
     const portrait = clamp01((1.05 - aspect) / 0.35);
-    const radius = lerp(lerp(lerp(0.8, 1.08, T.grow), 1.12, T.burst), 0.86, T.mom);
+    const radius = lerp(lerp(0.8, 1.08, T.grow), 1.12, T.burst);
     const tanHalf = Math.tan((FOV / 2) * Math.PI / 180);
     let shift = [0, 0], distance;
     if (capture) {
@@ -650,61 +642,52 @@ export function createHomeScene({ canvas, rtl = false, mobile = false, onHeld } 
       const port = Math.max(radius / (0.86 * tanHalf * aspect), radius / (0.42 * tanHalf));
       distance = lerp(land, port, portrait);
     }
-    const focus = [lerp(0, 0.02, T.mom), lerp(0.05, 0.27, T.mom), lerp(0, -0.12, T.mom)];
-    const az = camAzimuth(p, T) * (rtl ? -1 : 1) + ps.x * 0.1;
-    const el = lerp(0.08, 0.13, T.mom) + ps.y * 0.05;
+    const focus = [0, 0.05, 0];
+    const az = camAz * (rtl ? -1 : 1) + ps.x * 0.1;
+    const el = 0.08 + ps.y * 0.05;
     const cam = [focus[0] + Math.sin(az) * Math.cos(el) * distance, focus[1] + Math.sin(el) * distance, focus[2] + Math.cos(az) * Math.cos(el) * distance];
     const f = norm([focus[0] - cam[0], focus[1] - cam[1], focus[2] - cam[2]]);
     const r = norm(cross(f, [0, 1, 0]));
     const u = cross(r, f);
 
-    // --- volumes englobants ---
-    const childBound = [pos[0], pos[1], pos[2], 0.85 * scale];
-    gl.uniform1f(U.uChildK, 0.05 * scale);
-    const momCenter = [MOM_ORIGIN[0], MOM_ORIGIN[1] + 0.35, MOM_ORIGIN[2] + 0.15];
-    const momBound = [...momCenter, 1.05];
-    const scene = T.mom > 0.002
-      ? [...momCenter, Math.max(1.05, Math.hypot(pos[0] - momCenter[0], pos[1] - momCenter[1], pos[2] - momCenter[2]) + childBound[3])]
-      : childBound;
+    // --- la goutte des photos : centrée sur la scène, à la taille de l'écran ---
+    const W = canvas.width, H = canvas.height;
+    const photoR = capture ? 0.46 * Math.min(W, H) : lerp(Math.min(0.4 * H, 0.3 * W), Math.min(0.21 * H, 0.43 * W), portrait);
+    const reveal = T.reveal * photoReady[0];
+    const swap = Math.min(T.swap, photoReady[1] ? (photoReady[2] ? 2 : 1) : 0);
 
-    gl.uniform2f(U.uRes, canvas.width, canvas.height);
+    gl.uniform2f(U.uRes, W, H);
     gl.uniform1f(U.uTime, time);
     gl.uniform3fv(U.uCamPos, cam);
     gl.uniformMatrix3fv(U.uCamRot, false, [...r, ...u, ...f]);
     gl.uniform1f(U.uTanHalf, tanHalf);
     gl.uniform2fv(U.uShift, shift);
     gl.uniform4fv(U.uChild, childData);
-    gl.uniform4fv(U.uMom, momData);
-    gl.uniform4fv(U.uChildBound, childBound);
-    gl.uniform4fv(U.uMomBound, momBound);
-    gl.uniform4fv(U.uSceneBound, scene);
-    gl.uniform1f(U.uMomForm, T.mom);
-    const fo = momFace(false), fc = momFace(true);
-    const hd = [0, 1, 2].map(i => lerp(fo.head[i], fc.head[i], T.hold) + MOM_ORIGIN[i]);
-    gl.uniform3fv(U.uHeadPos, hd);
-    gl.uniform3fv(U.uFaceDir, norm([0, 1, 2].map(i => lerp(fo.f[i], fc.f[i], T.hold))));
-    gl.uniform1f(U.uMomBaseY, MOM_ORIGIN[1]);
+    gl.uniform4f(U.uChildBound, pos[0], pos[1], pos[2], 0.85 * scale);
+    gl.uniform1f(U.uChildK, lerp(0.035, 0.05, T.shape) * scale);
+    gl.uniform1f(U.uCell, 1 - T.shape);
+    gl.uniform1f(U.uScene, reveal < 0.999 ? 1 : 0);
     gl.uniform4f(U.uBubble, 0, 0.05, 0, bubbleR);
     gl.uniform1f(U.uBubbleA, bubbleA);
     gl.uniform1f(U.uBurst, T.burst);
     gl.uniform1f(U.uFlow, 1 + T.tremble * 2.5 + T.aurora * 0.8);
     const beat = time * 1.15 % 1;
     const pulse = Math.exp(-Math.pow(beat * 9, 2)) + 0.6 * Math.exp(-Math.pow((beat - 0.2) * 9, 2));
-    // le petit cœur du bébé devient, à la fin, une lumière partagée entre la maman et son enfant
-    const contact = [MOM_ORIGIN[0] - 0.08, MOM_ORIGIN[1] + 0.47, MOM_ORIGIN[2] + 0.24];
-    const slow = 0.5 + 0.5 * Math.sin(time * 1.6);
-    const heartPos = [0, 1, 2].map(i => lerp(chestA[i] + (i === 2 ? 0.02 : 0), contact[i], T.hold));
-    const heartI = Math.max((0.35 + 0.65 * pulse) * T.heart, T.hold * (0.7 + 0.3 * slow)) * introK;
-    gl.uniform4f(U.uHeart, heartPos[0], heartPos[1], heartPos[2], heartI);
-    gl.uniform1f(U.uHeartGold, T.hold);
+    const chest = childData.subarray(5 * 8, 5 * 8 + 3);
+    gl.uniform4f(U.uHeart, chest[0], chest[1], chest[2] + 0.02, (0.35 + 0.65 * pulse) * T.heart * lerp(0.25, 1, T.shape) * introK);
     gl.uniform4fv(U.uPart, partData);
     gl.uniform2f(U.uSun, 0.5 + shift[0] * 0.5, 0.5 + shift[1] * 0.5);
     gl.uniform1f(U.uSunK, T.sun);
     gl.uniform1f(U.uColorK, 0.35 + 0.65 * T.color);
-    gl.uniform1f(U.uFlash, T.flash);
-    gl.uniform1f(U.uGlow, introK * (0.6 + 0.4 * T.heart) + T.flash * 0.35);
+    gl.uniform1f(U.uFlash, Math.max(T.flash, T.kick * 0.7));
+    gl.uniform1f(U.uGlow, introK * (0.6 + 0.4 * T.heart) + T.flash * 0.35 + T.kick * 0.6);
+    gl.uniform1f(U.uReveal, reveal);
+    gl.uniform1f(U.uSwap, swap);
+    gl.uniform3fv(U.uZoom, photoZoom(p));
+    gl.uniform2f(U.uPhotoC, (0.5 + shift[0] * 0.5) * W + ps.x * 0.012 * W, (0.5 + shift[1] * 0.5) * H - ps.y * 0.012 * H);
+    gl.uniform1f(U.uPhotoR, photoR);
 
-    const isHeld = T.hold > 0.82;
+    const isHeld = p > 0.93;
     if (isHeld !== held) { held = isHeld; if (onHeld) onHeld(held); }
   }
 
@@ -761,13 +744,14 @@ export function createHomeScene({ canvas, rtl = false, mobile = false, onHeld } 
     start() { if (running) return; running = true; lastTime = performance.now(); lastFrame = 0; raf = requestAnimationFrame(loop); },
     stop() { running = false; cancelAnimationFrame(raf); },
     renderOnce() { render(); },
-    ready: Promise.resolve(true),
+    ready,
     get progress() { return progress; },
     get quality() { return quality; },
     // Contrôle qualité : place le récit sans inertie.
     snap(p) { target = progress = clamp01(p); intro = 1; introStart = -10; render(); },
     // Image fixe du récit, scène centrée (images de secours, images de partage).
     async capture(p, width, height, type = 'image/webp', q = 0.86) {
+      await ready;
       const wasRunning = running;
       api.stop();
       capture = true;
