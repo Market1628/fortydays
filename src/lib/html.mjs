@@ -71,17 +71,6 @@ export function photo(key, lang, { ratio = [4, 5], widths = [480, 800, 1120], si
 </figure>`;
 }
 
-// Adresse de la photographie finale pour la scène 3D (texture WebGL : JPEG, cadrage sur les visages).
-export function finalePhotoUrl() {
-  return `${UNSPLASH}${PHOTOS.finale.src}?fm=jpg&fit=crop&crop=faces&w=846&h=1200&q=78`;
-}
-
-// Crédit d'une photo Unsplash (texte et liens).
-export function photoCredit(key, ui) {
-  const p = PHOTOS[key];
-  return `${ui.photo} <a href="https://unsplash.com/@${p.user}?utm_source=40days&amp;utm_medium=referral" rel="noopener">${esc(p.author)}</a> / <a href="https://unsplash.com/photos/${p.page}?utm_source=40days&amp;utm_medium=referral" rel="noopener">Unsplash</a>`;
-}
-
 // ---- Prix --------------------------------------------------------------------------------
 const LOCALE = { fr: 'fr-FR', en: 'en-US', he: 'he-IL' };
 export function price(amount, currency, lang) {

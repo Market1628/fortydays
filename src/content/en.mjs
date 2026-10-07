@@ -174,7 +174,7 @@ export default {
   },
 
   home: {
-    story: { captions: ['A drop of life', 'The first cells', 'Your baby grows', 'Birth', 'In your arms'] },
+    story: { captions: ['A spark of life', 'A beating heart', 'Your baby grows', 'Birth', 'In your arms'] },
     hero: {
       eyebrow: 'Postpartum support · France &amp; Israel',
       title: 'The 40 days after birth, <em>finally about you</em>',
@@ -426,7 +426,7 @@ export default {
 </ul>` },
       { title: 'Hosting', html: `<p>The website is hosted by {host}, {hostAddress}, phone: {hostPhone}.</p>` },
       { title: 'Intellectual property', html: `<p>The texts, the “40 Days” logotype, the illustrations and the 3D scene on this site belong to {companyName}, unless stated otherwise. Any reproduction or reuse without written permission is prohibited.</p>
-<p>The 3D scene uses the Three.js library, distributed under the MIT license. The Cormorant Garamond, DM Sans, Frank Ruhl Libre and Assistant typefaces are distributed under the SIL Open Font License.</p>` },
+<p>The 3D scene is an original real-time rendering (WebGL), built without any third-party library. The Cormorant Garamond, DM Sans, Frank Ruhl Libre and Assistant typefaces are distributed under the SIL Open Font License.</p>` },
       { title: 'Photo credits', html: `<p>The photographs come from Unsplash and are used under the Unsplash license. Thank you to their photographers:</p>
 {photoCredits}` },
       { title: 'Health information', html: `<p>The content offered by 40 Days is provided for information and wellbeing support. It is not medical advice and does not replace follow-up by your midwife, your doctor or any other health professional.</p>

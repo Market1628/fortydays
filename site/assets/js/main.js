@@ -287,7 +287,6 @@ function initStory() {
         canvas,
         rtl: document.documentElement.dir === 'rtl',
         mobile: window.matchMedia('(max-width: 899px), (pointer: coarse)').matches,
-        photo: canvas.dataset.finalePhoto,
         onHeld: held => {
           story.classList.toggle('is-held', held);
           if (held) heldTitle?.classList.add('is-shown');

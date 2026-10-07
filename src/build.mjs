@@ -1,7 +1,7 @@
 // Génère le site statique dans le dossier site/ (Node 18 ou plus récent, aucune dépendance).
 //   node src/build.mjs
 // Sources : src/config.json (tarifs, coordonnées, mentions), src/content/*.mjs (textes),
-// src/lib/*.mjs (gabarits), src/assets/ (CSS, JS, images, Three.js), copiés tels quels.
+// src/lib/*.mjs (gabarits), src/assets/ (CSS, JS, images), copiés tels quels.
 import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -62,15 +62,14 @@ const write = (rel, content) => {
   writeFileSync(file, content);
 };
 
-const importMap = `<script type="importmap">{"imports":{"three":"${site.asset('vendor/three.module.js')}"}}</script>
-<link rel="preload" href="${site.asset('img/story-1.webp')}" as="image" type="image/webp" fetchpriority="high">`;
+const homeHead = `<link rel="preload" href="${site.asset('img/story-1.webp')}" as="image" type="image/webp" fetchpriority="high">`;
 
 let count = 0;
 for (const [lang, t] of Object.entries(langs)) {
   const base = [organization(site), website(site, t)];
   const forms = { form: t.formJs };
   const pages = {
-    home: { main: homePage(site, t), graph: [...base, webpage(site, t, 'home'), faq(t)], head: importMap, bodyClass: 'has-story' },
+    home: { main: homePage(site, t), graph: [...base, webpage(site, t, 'home'), faq(t)], head: homeHead, bodyClass: 'has-story' },
     plans: { main: plansPage(site, t), graph: [...base, webpage(site, t, 'plans'), breadcrumb(site, t, 'plans'), ...products(site, t)], i18n: forms, mobileCta: false },
     platform: { main: platformPage(site, t), graph: [...base, webpage(site, t, 'platform'), breadcrumb(site, t, 'platform')], i18n: forms },
     contact: { main: contactPage(site, t), graph: [...base, webpage(site, t, 'contact'), breadcrumb(site, t, 'contact')], i18n: forms }

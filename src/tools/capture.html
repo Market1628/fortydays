@@ -10,7 +10,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=DM+Sans:wght@400;500;600&family=Frank+Ruhl+Libre:wght@500;600&family=Assistant:wght@400;600&display=swap">
 <style>body{margin:0;padding:16px;background:#FBF7F2;font:15px system-ui;color:#4A3B34}canvas{width:420px;height:420px;border-radius:12px}#out{font:12px monospace;white-space:pre}button{font:inherit;padding:8px 14px;margin:0 6px 12px 0;border-radius:999px;border:1px solid #4A3B34;background:#fff;cursor:pointer}</style>
 <p><button onclick="run('all')">Tout générer</button><button onclick="run('frames')">Images du récit</button><button onclick="run('og')">Images de partage</button><button onclick="run('icons')">Icônes</button></p>
-<script type="importmap">{"imports":{"three":"/assets/vendor/three.module.js"}}</script>
 <canvas id="c" width="600" height="600"></canvas>
 <div id="out"></div>
 <script type="module">
@@ -22,16 +21,13 @@ const save = async (name, blob) => {
   log(await r.text());
 };
 const toBlob = (canvas, type, q) => new Promise(r => canvas.toBlob(r, type, q));
-// La photographie finale est lue dans la page d'accueil générée (une seule source : src/content/photos.mjs).
-const home = await fetch('/fr/').then(r => r.text());
-const photo = (home.match(/data-finale-photo="([^"]+)"/) || [])[1]?.replace(/&amp;/g, '&') || '';
-const scene = createHomeScene({ canvas: document.getElementById('c'), photo });
+const scene = createHomeScene({ canvas: document.getElementById('c') });
 window.S = scene;
 
 const C = { cream: '#FBF7F2', rose: '#E8C4B8', terra: '#9A5A3C', brown: '#4A3B34', muted: '#6B5A51', sage: '#56634F' };
 
 async function frames() {
-  const ps = [0.08, 0.365, 0.575, 0.752, 0.94];
+  const ps = [0.08, 0.34, 0.56, 0.70, 0.96];
   for (let i = 0; i < ps.length; i++) {
     const blob = await scene.capture(ps[i], 900, 900, 'image/webp', 0.84);
     await save(`story-${i + 1}.webp`, blob);
@@ -73,7 +69,7 @@ function wrap(ctx, text, maxWidth) {
 }
 
 async function og() {
-  const blob = await scene.capture(0.94, 640, 640, 'image/png');
+  const blob = await scene.capture(0.96, 640, 640, 'image/png');
   const img = await createImageBitmap(blob);
   const T = {
     fr: { t: 'Les 40 jours après l’accouchement, enfin pour vous', s: 'Accompagnement post-partum · France & Israël', title: '"Cormorant Garamond"', body: '"DM Sans"' },

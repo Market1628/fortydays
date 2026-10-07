@@ -176,7 +176,7 @@ export default {
   },
 
   home: {
-    story: { captions: ['Une goutte de vie', 'Les premières cellules', 'Bébé grandit en vous', 'La naissance', 'Dans vos bras'] },
+    story: { captions: ['Une étincelle de vie', 'Un cœur qui bat', 'Bébé grandit en vous', 'La naissance', 'Dans vos bras'] },
     hero: {
       eyebrow: 'Accompagnement post-partum · France &amp; Israël',
       title: 'Les 40 jours après l’accouchement, <em>enfin pour vous</em>',
@@ -429,7 +429,7 @@ export default {
 </ul>` },
       { title: 'Hébergement', html: `<p>Le site est hébergé par {host}, {hostAddress}, téléphone : {hostPhone}.</p>` },
       { title: 'Propriété intellectuelle', html: `<p>Les textes, le logotype « 40 Days », les illustrations et la scène 3D du site sont la propriété de {companyName}, sauf mention contraire. Toute reproduction ou réutilisation sans autorisation écrite est interdite.</p>
-<p>La scène 3D utilise la bibliothèque Three.js, distribuée sous licence MIT. Les polices Cormorant Garamond, DM Sans, Frank Ruhl Libre et Assistant sont distribuées sous licence SIL Open Font License.</p>` },
+<p>La scène 3D est un rendu original calculé en temps réel (WebGL), sans bibliothèque tierce. Les polices Cormorant Garamond, DM Sans, Frank Ruhl Libre et Assistant sont distribuées sous licence SIL Open Font License.</p>` },
       { title: 'Crédits photographiques', html: `<p>Les photographies proviennent d’Unsplash et sont utilisées selon la licence Unsplash. Merci à leurs autrices et auteurs :</p>
 {photoCredits}` },
       { title: 'Informations de santé', html: `<p>Les contenus de 40 Days sont fournis à titre d’information et d’accompagnement bien-être. Ils ne constituent pas un avis médical et ne remplacent pas le suivi par votre sage-femme, votre médecin ou tout autre professionnel de santé.</p>

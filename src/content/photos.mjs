@@ -3,15 +3,6 @@
 // Pour remplacer une photo : changez `src` (identifiant « photo-… » de l'image), `page`
 // (identifiant de la page Unsplash), l'autrice ou l'auteur, et les trois textes alternatifs.
 export const PHOTOS = {
-  // Photographie finale du récit 3D : elle apparaît dans la goutte de verre (chapitre « Réserver »).
-  finale: {
-    src: 'photo-1701839640481-33f20d4275d8', page: 'By4PyX-_pT4', author: 'Jonathan Borba', user: 'jonathanborba',
-    alt: {
-      fr: 'Une jeune maman embrasse tendrement son nouveau-né, emmailloté dans une couverture blanche.',
-      en: 'A young mother tenderly kisses her newborn, wrapped in a white knitted blanket.',
-      he: 'אמא צעירה מנשקת ברוך את התינוק שלה, העטוף בשמיכה לבנה סרוגה.'
-    }
-  },
   skin: {
     src: 'photo-1583710457367-47de0ea21fef', page: 'aUtvHsu8Uzk', author: 'Hollie Santos', user: 'holliesantos',
     alt: {

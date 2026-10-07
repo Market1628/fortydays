@@ -1563,9 +1563,6 @@ html[lang='he'] .site-footer__title { letter-spacing: 0; font-size: 0.95rem; }
 .logo__num { font-feature-settings: 'lnum' 0; font-variant-numeric: normal; }
 .page-hero + .section--tight { padding-top: 0; }
 
-/* Crédit de la photographie finale du récit 3D */
-.story-credit { margin: 1.2rem 0 0; font-size: 0.76rem; color: var(--brown-muted); }
-.story-credit a { color: var(--brown-muted); }
 /* Mobile : le chapitre final laisse plus de place au médaillon. */
 @media not ((min-width: 900px) and (min-aspect-ratio: 1/1)) {
   .chapter--cta { padding-top: calc(var(--header-h) + 56svh); }

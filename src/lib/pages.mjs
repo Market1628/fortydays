@@ -1,5 +1,5 @@
 // Gabarits des pages. Les textes viennent de src/content/<langue>.mjs, les tarifs de src/config.json.
-import { esc, icon, photo, photoCredit, finalePhotoUrl, price, primaryCurrency, secondaryCurrency } from './html.mjs';
+import { esc, icon, photo, price, primaryCurrency, secondaryCurrency } from './html.mjs';
 import { breadcrumbNav } from './layout.mjs';
 import { PHOTOS } from '../content/photos.mjs';
 
@@ -61,7 +61,7 @@ export function homePage(site, t) {
     <div class="story__frames">
       ${frames}
     </div>
-    <canvas class="story__canvas" data-story-canvas data-finale-photo="${esc(finalePhotoUrl())}"></canvas>
+    <canvas class="story__canvas" data-story-canvas></canvas>
     <p class="story__caption" data-story-caption data-captions="${esc(JSON.stringify(h.story.captions))}"><span class="story__caption-num" data-caption-num>01</span><span data-caption-text>${esc(h.story.captions[0])}</span></p>
   </div>
 
@@ -138,7 +138,6 @@ export function homePage(site, t) {
       <ul class="reassure">
         ${h.reassure.map(r => `<li>${icon(r.icon)}<span>${r.text}</span></li>`).join('')}
       </ul>
-      <p class="story-credit">${photoCredit('finale', t.ui)}</p>
     </div>
   </section>
 </div>

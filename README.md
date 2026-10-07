@@ -1,9 +1,9 @@
 # 40 Days : site vitrine et d'inscription
 
 Site statique multilingue (français, anglais, hébreu) pour **40 Days**, l'accompagnement des 40 jours
-après l'accouchement. L'accueil raconte en 3D, au fil du scroll, le chemin d'une goutte de verre nacré
-jusqu'à une maman qui tient son nouveau-né dans ses bras (Three.js, moteur de verre du skill
-*Premium 3D Glass*, adapté à un fond clair et à un récit en cinq étapes).
+après l'accouchement. L'accueil raconte en 3D, au fil du scroll, la croissance d'un embryon de verre nacré jusqu'au bébé
+que sa maman prend dans ses bras (rendu WebGL 2 sur mesure, sans bibliothèque, dans l'esprit du verre
+du skill *Premium 3D Glass* : irisation, dispersion, studio de lumière).
 
 - 24 pages : accueil, forfaits + inscription, plateforme + connexion, contact, 4 pages légales, × 3 langues
 - Aucune dépendance à installer : **Node.js 18 ou plus récent** suffit pour générer et prévisualiser
@@ -40,8 +40,8 @@ Le site est 100 % statique : copiez **le contenu du dossier `site/`** à la raci
   sinon français) et propose des liens de secours.
 - Le nom de domaine se règle dans `src/config.json` → `site.domain` (balises canonical, hreflang,
   Open Graph, sitemap). Si le site est servi dans un sous-dossier, renseignez `site.basePath`.
-- Vérifiez que la compression gzip ou brotli est active : Three.js pèse 1,2 Mo non compressé (≈ 300 Ko
-  compressé). Il n'est chargé que sur l'accueil, après le texte.
+- Vérifiez que la compression gzip ou brotli est active. La scène 3D tient en un seul fichier de 40 Ko,
+  chargé seulement sur l'accueil, après le texte.
 
 ### Démo sur GitHub Pages
 
@@ -130,21 +130,26 @@ pilote une étape du récit (fonction `timeline`) :
 
 | Chapitre | Récit 3D |
 |---|---|
-| 01 Accueil | une goutte de verre nacré, une perle de lumière s'y allume |
-| 02 Le programme | la perle se divise en 2, 4 puis 8 cellules, la goutte s'arrondit |
-| 03 Ce qui est inclus | les cellules forment un embryon lové qui grandit, la goutte devient un ventre rond |
-| 04 Témoignages | naissance : le bébé devient lumière, la goutte prend la forme d'un médaillon de verre |
-| 05 Réserver | dans le médaillon apparaît une maman qui embrasse son nouveau-né (photographie) ; le texte « Maintenant, c'est votre tour… » apparaît |
+| 01 Accueil | un embryon de nacre rose dans une bulle de savon irisée ; un petit cœur bat en lumière |
+| 02 Le programme | bras et jambes poussent, la tête trouve ses proportions, le soleil se lève derrière la bulle |
+| 03 Ce qui est inclus | bébé grandit, lové ; des aurores colorées traversent le fond |
+| 04 Témoignages | la bulle frémit puis éclate en gouttelettes de lumière, bébé s'étire et tend les bras ; une maman de verre opalin se condense dans un tourbillon de lumière |
+| 05 Réserver | elle le serre contre elle, leurs cœurs partagent une lumière dorée ; le texte « Maintenant, c'est votre tour… » apparaît |
+
+Tout est calculé dans un seul shader (« raymarching » de volumes arrondis fondus les uns dans les autres) :
+les formes poussent et se transforment sans coupure, sans modèle 3D, sans image ni texture à télécharger.
 
 - La 3D se charge **après** le contenu (événement `load` puis temps libre du navigateur), seulement si WebGL 2
   est disponible, si « Réduire les animations » n'est pas activé et si le mode économie de données est coupé.
   Sinon, cinq images fixes (`src/assets/img/story-1…5.webp`) suivent les chapitres.
 - L'objet se place à droite du texte sur ordinateur (à gauche en hébreu) et en haut de l'écran sur mobile.
-- Réglages utiles en tête de fichier : `DAMPING` (inertie), `PALETTE`, `MEDALLION` (forme et taille du médaillon
-  final), et la fonction `timeline`.
-- La photographie finale se change dans `src/content/photos.mjs` (entrée `finale` : identifiant Unsplash, crédit,
-  textes alternatifs). Elle est lue par WebGL depuis le CDN d'Unsplash, qui autorise le CORS ; une photo hébergée
-  ailleurs doit aussi l'autoriser. Pensez à régénérer ensuite les images fixes (atelier ci-dessous).
+- La résolution de rendu s'adapte toute seule à la puissance de l'appareil (`QUALITY`), et la scène s'arrête
+  quand elle sort de l'écran ou que l'onglet est caché.
+- Réglages utiles en tête de fichier : `DAMPING` (inertie du scroll), `QUALITY`, la fonction `timeline` (à quel
+  moment du scroll se passe chaque étape), `camAzimuth` (angle de la caméra), les poses `embryoPose`, `fetusPose`,
+  `heldPose` et `momPose`. Les couleurs sont dans le shader (`background`, `shadeChild`, `shadeMom`).
+- Aperçu de la scène seule, avec un curseur : `node src/serve.mjs 8080 --dev` puis
+  `http://127.0.0.1:8080/tools/scene.html?p=0.95` (`&rtl` pour la mise en page hébreu).
 
 **Régénérer les images** (images fixes du récit, images de partage `og-fr/en/he.jpg`, icônes et logo) depuis la
 vraie scène : lancez `node src/serve.mjs 8080 --dev`, ouvrez `http://127.0.0.1:8080/tools/capture.html`,
@@ -192,19 +197,19 @@ src/
   config.json          tarifs, coordonnées, informations légales
   content/             textes fr / en / he, photos
   lib/                 gabarits HTML, SEO (JSON-LD, sitemap)
-  assets/              CSS, JS, images, Three.js (copiés tels quels dans site/assets)
+  assets/              CSS, JS, images (copiés tels quels dans site/assets)
     js/main.js         menu, apparitions, parallaxe, compteur des 40 jours, chargement de la 3D
     js/home-scene.js   scène 3D
     js/forms.js        validation et envoi des formulaires
     js/services.js     fonctions factices à brancher
     js/consent.js      bandeau cookies
   tools/capture.html   atelier d'images (mode --dev)
+  tools/scene.html     aperçu de la scène 3D avec un curseur (mode --dev)
 site/                  le site généré, à mettre en ligne
 ```
 
 ## Crédits et licences
 
-- Three.js r160 : licence MIT (`site/assets/vendor/three-LICENSE.txt`)
 - Cormorant Garamond, DM Sans, Frank Ruhl Libre, Assistant : SIL Open Font License (Google Fonts)
 - Photographies : Unsplash (licence Unsplash), autrices et auteurs crédités sous chaque photo et dans les
   mentions légales
