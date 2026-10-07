@@ -1,0 +1,39 @@
+# 40 Days : configuration Apache
+DirectoryIndex index.html
+ErrorDocument 404 /fortydays/404.html
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Forcer HTTPS
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  # Racine : langue du navigateur (hébreu, anglais), français par défaut
+  RewriteCond %{HTTP:Accept-Language} ^(he|iw) [NC]
+  RewriteRule ^$ /fortydays/he/ [R=302,L]
+  RewriteCond %{HTTP:Accept-Language} ^en [NC]
+  RewriteRule ^$ /fortydays/en/ [R=302,L]
+  RewriteRule ^$ /fortydays/fr/ [R=302,L]
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml application/manifest+json
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>40 Days · Accompagnement post-partum</title>
+<meta name="robots" content="noindex, follow">
+<link rel="alternate" hreflang="fr" href="https://market1628.github.io/fortydays/fr/">
+<link rel="alternate" hreflang="en" href="https://market1628.github.io/fortydays/en/">
+<link rel="alternate" hreflang="he" href="https://market1628.github.io/fortydays/he/">
+<link rel="alternate" hreflang="x-default" href="https://market1628.github.io/fortydays/fr/">
+<link rel="icon" href="/fortydays/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function () {
+  var lang = 'fr';
+  try {
+    var saved = localStorage.getItem('fd-lang');
+    if (saved === 'fr' || saved === 'en' || saved === 'he') lang = saved;
+    else {
+      var list = navigator.languages || [navigator.language || 'fr'];
+      for (var i = 0; i < list.length; i++) {
+        var code = String(list[i] || '').slice(0, 2).toLowerCase();
+        if (code === 'he' || code === 'iw') { lang = 'he'; break; }
+        if (code === 'fr') { lang = 'fr'; break; }
+        if (code === 'en') { lang = 'en'; break; }
+      }
+    }
+  } catch (e) {}
+  location.replace('/fortydays/' + lang + '/');
+})();
+</script>
+<style>body{font-family:system-ui,sans-serif;background:#FBF7F2;color:#4A3B34;display:grid;place-content:center;text-align:center;min-height:100vh;margin:0}a{color:#9A5A3C;margin:0 .6em}</style>
+</head>
+<body>
+<h1 style="font:500 2rem Georgia,serif;margin:0 0 1rem">40 Days</h1>
+<p><a href="/fortydays/fr/" lang="fr">Français</a><a href="/fortydays/en/" lang="en">English</a><a href="/fortydays/he/" lang="he" dir="rtl">עברית</a></p>
+</body>
+</html>
