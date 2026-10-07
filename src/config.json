@@ -1,0 +1,43 @@
+{
+  "_lisez_moi": "Fichier de configuration unique : tarifs, coordonnées et informations légales. Après modification, relancez « node src/build.mjs ». Les champs « [À COMPLÉTER] » s'affichent tels quels dans les pages légales.",
+
+  "site": {
+    "name": "40 Days",
+    "domain": "https://fortydays.com",
+    "basePath": "/",
+    "email": "contact@fortydays.com",
+    "phone": "[À COMPLÉTER]",
+    "defaultLang": "fr",
+    "langs": ["fr", "en", "he"],
+    "themeColor": "#FBF7F2"
+  },
+
+  "pricing": {
+    "_note": "Tarifs provisoires. EUR pour la France, ILS pour Israël. Le forfait « featured » est mis en avant comme le plus choisi.",
+    "currencyByCountry": { "FR": "EUR", "IL": "ILS" },
+    "plans": [
+      { "id": "essentiel",   "featured": false, "price": { "EUR": 149, "ILS": 590 } },
+      { "id": "cocon",       "featured": true,  "price": { "EUR": 390, "ILS": 1550 } },
+      { "id": "renaissance", "featured": false, "price": { "EUR": 690, "ILS": 2750 } }
+    ]
+  },
+
+  "legal": {
+    "companyName": "Sarah & Alexis",
+    "legalForm": "[À COMPLÉTER]",
+    "shareCapital": "[À COMPLÉTER]",
+    "address": "[À COMPLÉTER]",
+    "siret": "[À COMPLÉTER]",
+    "rcs": "[À COMPLÉTER]",
+    "vatNumber": "[À COMPLÉTER]",
+    "israelCompanyNumber": "[À COMPLÉTER]",
+    "israelAddress": "[À COMPLÉTER]",
+    "publicationDirector": "[À COMPLÉTER]",
+    "host": "[À COMPLÉTER]",
+    "hostAddress": "[À COMPLÉTER]",
+    "hostPhone": "[À COMPLÉTER]",
+    "consumerMediator": "[À COMPLÉTER]",
+    "privacyContact": "contact@fortydays.com",
+    "lastUpdate": "2026-10-06"
+  }
+}

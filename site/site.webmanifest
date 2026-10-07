@@ -1,0 +1,21 @@
+{
+  "name": "40 Days",
+  "short_name": "40 Days",
+  "description": "Remise en forme post-partum douce, accompagnement doula, repas livrés et communauté de mamans : 40 Days prend soin de vous 40 jours après l’accouchement.",
+  "start_url": "/fr/",
+  "display": "minimal-ui",
+  "background_color": "#FBF7F2",
+  "theme_color": "#FBF7F2",
+  "icons": [
+    {
+      "src": "/assets/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

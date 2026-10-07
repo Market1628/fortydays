@@ -1,0 +1,153 @@
+<!doctype html>
+<!--
+  40 Days : atelier d'images. Rend, depuis la vraie scène 3D, les images fixes du récit
+  (story-1 à 5, affichées sans WebGL ou avec « réduire les animations »), les images de partage
+  (og-fr/en/he.jpg) et les icônes. Utilisation :
+    node src/serve.mjs 8080 --dev   puis   http://127.0.0.1:8080/tools/capture.html
+  Cliquez sur « Tout générer », puis relancez « node src/build.mjs ».
+-->
+<html lang="fr"><meta charset="utf-8"><title>40 Days · atelier d'images</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=DM+Sans:wght@400;500;600&family=Frank+Ruhl+Libre:wght@500;600&family=Assistant:wght@400;600&display=swap">
+<style>body{margin:0;padding:16px;background:#FBF7F2;font:15px system-ui;color:#4A3B34}canvas{width:420px;height:420px;border-radius:12px}#out{font:12px monospace;white-space:pre}button{font:inherit;padding:8px 14px;margin:0 6px 12px 0;border-radius:999px;border:1px solid #4A3B34;background:#fff;cursor:pointer}</style>
+<p><button onclick="run('all')">Tout générer</button><button onclick="run('frames')">Images du récit</button><button onclick="run('og')">Images de partage</button><button onclick="run('icons')">Icônes</button></p>
+<script type="importmap">{"imports":{"three":"/assets/vendor/three.module.js"}}</script>
+<canvas id="c" width="600" height="600"></canvas>
+<div id="out"></div>
+<script type="module">
+import { createHomeScene } from '/assets/js/home-scene.js';
+const out = document.getElementById('out');
+const log = s => { out.textContent += s + '\n'; };
+const save = async (name, blob) => {
+  const r = await fetch('/__save?to=' + name, { method: 'POST', body: blob });
+  log(await r.text());
+};
+const toBlob = (canvas, type, q) => new Promise(r => canvas.toBlob(r, type, q));
+// La photographie finale est lue dans la page d'accueil générée (une seule source : src/content/photos.mjs).
+const home = await fetch('/fr/').then(r => r.text());
+const photo = (home.match(/data-finale-photo="([^"]+)"/) || [])[1]?.replace(/&amp;/g, '&') || '';
+const scene = createHomeScene({ canvas: document.getElementById('c'), photo });
+window.S = scene;
+
+const C = { cream: '#FBF7F2', rose: '#E8C4B8', terra: '#9A5A3C', brown: '#4A3B34', muted: '#6B5A51', sage: '#56634F' };
+
+async function frames() {
+  const ps = [0.08, 0.365, 0.575, 0.752, 0.94];
+  for (let i = 0; i < ps.length; i++) {
+    const blob = await scene.capture(ps[i], 900, 900, 'image/webp', 0.84);
+    await save(`story-${i + 1}.webp`, blob);
+  }
+}
+
+function logo(ctx, x, y, scale, align = 'left') {
+  ctx.save();
+  ctx.direction = 'ltr';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `italic 600 ${88 * scale}px "Cormorant Garamond"`;
+  const w40 = ctx.measureText('40').width;
+  ctx.font = `600 ${30 * scale}px "DM Sans"`;
+  ctx.letterSpacing = `${10 * scale}px`;
+  const wDays = ctx.measureText('DAYS').width;
+  const total = w40 + 14 * scale + wDays;
+  const x0 = align === 'right' ? x - total : align === 'center' ? x - total / 2 : x;
+  ctx.letterSpacing = '0px';
+  ctx.fillStyle = C.terra;
+  ctx.font = `italic 600 ${88 * scale}px "Cormorant Garamond"`;
+  ctx.fillText('40', x0, y);
+  ctx.fillStyle = C.brown;
+  ctx.font = `600 ${30 * scale}px "DM Sans"`;
+  ctx.letterSpacing = `${10 * scale}px`;
+  ctx.fillText('DAYS', x0 + w40 + 14 * scale, y);
+  ctx.restore();
+}
+
+function wrap(ctx, text, maxWidth) {
+  const words = text.split(' '), lines = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; } else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+async function og() {
+  const blob = await scene.capture(0.94, 640, 640, 'image/png');
+  const img = await createImageBitmap(blob);
+  const T = {
+    fr: { t: 'Les 40 jours après l’accouchement, enfin pour vous', s: 'Accompagnement post-partum · France & Israël', title: '"Cormorant Garamond"', body: '"DM Sans"' },
+    en: { t: 'The 40 days after birth, finally about you', s: 'Postpartum support · France & Israel', title: '"Cormorant Garamond"', body: '"DM Sans"' },
+    he: { t: '40 הימים שאחרי הלידה, סוף סוף בשבילך', s: 'ליווי אחרי לידה · ישראל וצרפת', title: '"Frank Ruhl Libre"', body: 'Assistant', rtl: true }
+  };
+  for (const [lang, d] of Object.entries(T)) {
+    const cv = document.createElement('canvas'); cv.width = 1200; cv.height = 630;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = C.cream; ctx.fillRect(0, 0, 1200, 630);
+    const imgX = d.rtl ? -20 : 580;
+    // render, edges melted into the cream
+    ctx.save();
+    ctx.drawImage(img, imgX, -5, 640, 640);
+    const g = ctx.createRadialGradient(imgX + 320, 315, 230, imgX + 320, 315, 330);
+    g.addColorStop(0, 'rgba(251,247,242,0)'); g.addColorStop(1, 'rgba(251,247,242,1)');
+    ctx.fillStyle = g; ctx.fillRect(imgX, -5, 640, 640);
+    ctx.restore();
+    const x = d.rtl ? 1120 : 80;
+    ctx.direction = d.rtl ? 'rtl' : 'ltr';
+    ctx.textAlign = d.rtl ? 'right' : 'left';
+    logo(ctx, x, 150, 0.95, d.rtl ? 'right' : 'left');
+    ctx.direction = d.rtl ? 'rtl' : 'ltr';
+    ctx.textAlign = d.rtl ? 'right' : 'left';
+    ctx.fillStyle = C.brown;
+    ctx.font = `500 ${d.rtl ? 54 : 62}px ${d.title}`;
+    const lines = wrap(ctx, d.t, 540);
+    lines.forEach((l, i) => ctx.fillText(l, x, 270 + i * (d.rtl ? 70 : 66)));
+    ctx.fillStyle = C.sage;
+    ctx.font = `600 ${d.rtl ? 28 : 24}px ${d.body}`;
+    ctx.fillText(d.s, x, 270 + lines.length * (d.rtl ? 70 : 66) + 40);
+    ctx.fillStyle = C.muted;
+    ctx.font = `500 22px "DM Sans"`;
+    ctx.direction = 'ltr';
+    ctx.textAlign = d.rtl ? 'right' : 'left';
+    ctx.fillText('fortydays.com', x, 560);
+    await save(`og-${lang}.jpg`, await toBlob(cv, 'image/jpeg', 0.88));
+  }
+}
+
+async function icons() {
+  const mono = async (size, name, rounded) => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = size;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = C.cream;
+    if (rounded) { ctx.beginPath(); ctx.roundRect(0, 0, size, size, size * 0.22); ctx.fill(); } else ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = '#E8C4B8'; ctx.lineWidth = Math.max(1, size * 0.03);
+    ctx.beginPath(); ctx.arc(size / 2, size / 2, size * 0.42, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = C.terra;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.font = `italic 600 ${size * 0.56}px "Cormorant Garamond"`;
+    ctx.fillText('40', size * 0.485, size * 0.67);
+    await save(name, await toBlob(cv, 'image/png'));
+  };
+  await mono(180, 'apple-touch-icon.png', false);
+  await mono(192, 'icon-192.png', false);
+  await mono(32, 'favicon-32.png', true);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 512;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = C.cream; ctx.fillRect(0, 0, 512, 512);
+  logo(ctx, 256, 292, 1.9, 'center');
+  await save('logo-512.png', await toBlob(cv, 'image/png'));
+}
+
+window.run = async (what = 'all') => {
+  await document.fonts.load('italic 600 80px "Cormorant Garamond"');
+  await document.fonts.load('500 60px "Cormorant Garamond"');
+  await document.fonts.load('600 30px "DM Sans"');
+  await document.fonts.load('500 30px "Frank Ruhl Libre"', 'א');
+  await document.fonts.load('600 30px Assistant', 'א');
+  if (what === 'all' || what === 'frames') await frames();
+  if (what === 'all' || what === 'og') await og();
+  if (what === 'all' || what === 'icons') await icons();
+  log('done');
+  return out.textContent;
+};
+</script>
