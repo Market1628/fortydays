@@ -157,6 +157,7 @@ export default {
       summaryOne: 'Merci de vérifier ce champ :'
     },
     sending: 'Envoi en cours…',
+    draftRestored: 'Votre saisie a été conservée : vous pouvez reprendre là où vous en étiez.',
     genericError: 'Une erreur est survenue. Réessayez dans un instant ou écrivez-nous à contact@fortydays.com.',
     totalLabel: '·',
     register: {
@@ -286,6 +287,11 @@ export default {
         { q: 'Le programme est-il disponible en France et en Israël, et en quelle langue ?', a: 'Oui, 40 Days est proposé en France et en Israël. La plateforme, les forums et les cours sont accessibles en français, en anglais et en hébreu, et notre équipe vous répond dans ces trois langues.' }
       ]
     },
+    reassure: [
+      { icon: 'lock', text: 'Paiement sécurisé' },
+      { icon: 'calendar', text: 'Réservable dès la grossesse' },
+      { icon: 'globe', text: 'En français, anglais et hébreu' }
+    ],
     final: {
       title: 'Prenez soin de celle qui prend soin',
       text: 'Réservez vos 40 jours en quelques minutes : nous nous occupons du reste.'
@@ -514,6 +520,7 @@ export default {
 <tbody>
 <tr><td><code>fd-consent</code></td><td>Mémorise vos choix de cookies</td><td>6 mois</td><td>Nécessaire</td></tr>
 <tr><td><code>fd-lang</code></td><td>Mémorise la langue choisie</td><td>Jusqu’à suppression</td><td>Nécessaire</td></tr>
+<tr><td><code>fd-draft-…</code></td><td>Conserve votre saisie dans un formulaire si la page se recharge (stockage de session)</td><td>Jusqu’à la fermeture de l’onglet</td><td>Nécessaire</td></tr>
 </tbody></table></div>
 <p>À ce jour, aucun outil de mesure d’audience ni de publicité n’est installé. S’ils l’étaient, ils ne seraient activés qu’après votre accord, dans les catégories « Mesure d’audience » et « Marketing ».</p>` },
       { title: 'Contenus de tiers', html: `<p>Pour afficher les polices de caractères et les photographies, votre navigateur contacte les serveurs de Google Fonts et d’Unsplash, qui reçoivent votre adresse IP. Ces services ne déposent pas de cookies via notre site.</p>` },

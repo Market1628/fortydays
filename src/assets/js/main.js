@@ -180,6 +180,28 @@ function initMobileCta() {
   update();
 }
 
+// Hauteur occupée en bas de l'écran par les barres fixes visibles (réservation mobile, cookies).
+// Elle alimente scroll-padding-bottom : un élément atteint au clavier n'est jamais caché dessous.
+function initObscuredBottom() {
+  const bars = [document.querySelector('[data-mobile-cta]'), document.querySelector('[data-consent]')].filter(Boolean);
+  if (!bars.length) return;
+  const update = onFrame(() => {
+    let covered = 0;
+    bars.forEach(bar => {
+      if (bar.hidden || getComputedStyle(bar).visibility === 'hidden') return;
+      const rect = bar.getBoundingClientRect();
+      if (!rect.height) return;   // display: none (barre mobile sur ordinateur)
+      if (rect.top < window.innerHeight) covered = Math.max(covered, window.innerHeight - rect.top);
+    });
+    document.documentElement.style.setProperty('--obscured-bottom', `${Math.round(covered)}px`);
+  });
+  const watcher = new MutationObserver(update);
+  bars.forEach(bar => watcher.observe(bar, { attributes: true, attributeFilter: ['hidden', 'class'] }));
+  bars.forEach(bar => bar.addEventListener('transitionend', update));
+  window.addEventListener('resize', update);
+  update();
+}
+
 // ---- Récit 3D de l'accueil --------------------------------------------------------------------
 function initStory() {
   const story = document.querySelector('[data-story]');
@@ -229,6 +251,16 @@ function initStory() {
     setStage(Math.min(chapters.length - 1, Math.floor(p * chapters.length)));
     if (scene) scene.setProgress(p);
   });
+  // Le titre final apparaît quand le bébé est dans les bras ; s'il reste 1,6 s à l'écran sans que la
+  // scène y soit arrivée (machine lente), il est révélé quand même.
+  const heldTitle = story.querySelector('[data-held-title]');
+  if (heldTitle && 'IntersectionObserver' in window) {
+    let timer = 0;
+    new IntersectionObserver(([entry]) => {
+      clearTimeout(timer);
+      if (entry.isIntersecting) timer = setTimeout(() => heldTitle.classList.add('is-shown'), 1600);
+    }, { threshold: 0.6 }).observe(heldTitle);
+  }
   measure();
   update();
   window.addEventListener('scroll', update, { passive: true });
@@ -256,7 +288,10 @@ function initStory() {
         rtl: document.documentElement.dir === 'rtl',
         mobile: window.matchMedia('(max-width: 899px), (pointer: coarse)').matches,
         photo: canvas.dataset.finalePhoto,
-        onHeld: held => story.classList.toggle('is-held', held)
+        onHeld: held => {
+          story.classList.toggle('is-held', held);
+          if (held) heldTitle?.classList.add('is-shown');
+        }
       });
       window.__fortyScene = scene;      // contrôle qualité (voir README)
       measure();
@@ -302,6 +337,7 @@ initParallax();
 initDays();
 initMobileCta();
 initConsent(i18n);
+initObscuredBottom();
 initStory();
 if (document.querySelector('[data-form]')) {
   import('./forms.js').then(m => m.initForms(i18n));

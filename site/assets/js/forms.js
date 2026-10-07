@@ -132,13 +132,50 @@ export function initForms(i18n) {
       label.dataset.idle = label.textContent;
       label.textContent = T.sending;
       button.setAttribute('aria-disabled', 'true');
+      button.classList.add('is-busy');
       button.disabled = true;
     } else {
       label.textContent = label.dataset.idle || label.textContent;
+      button.classList.remove('is-busy');
       button.removeAttribute('aria-disabled');
       button.disabled = false;
     }
   }
+
+  // ---- Brouillon : la saisie survit à un rechargement de page --------------------------------------
+  // Conservé dans sessionStorage (effacé à la fermeture de l'onglet), jamais les cases de consentement
+  // ni les mots de passe : un accord se redonne à chaque fois.
+  const draftKey = form => `fd-draft-${form.dataset.form}`;
+  const draftable = el => el.name && !['password', 'submit', 'button', 'hidden'].includes(el.type)
+    && !['consent', 'newsletter'].includes(el.name);
+  function restoreDraft(form) {
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem(draftKey(form)) || 'null'); } catch { /* stockage indisponible */ }
+    if (!saved) return;
+    let restored = false;
+    [...form.elements].filter(draftable).forEach(el => {
+      if (!(el.name in saved)) return;
+      if (el.type === 'radio') el.checked = saved[el.name] === el.value;
+      else if (el.type === 'checkbox') el.checked = !!saved[el.name];
+      else if (saved[el.name]) { el.value = saved[el.name]; restored = true; }
+    });
+    if (restored) status(form, T.draftRestored);
+  }
+  function watchDraft(form) {
+    let timer = 0;
+    const save = () => {
+      const data = {};
+      [...form.elements].filter(draftable).forEach(el => {
+        if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+        else if (el.type === 'checkbox') data[el.name] = el.checked;
+        else data[el.name] = el.value;
+      });
+      try { sessionStorage.setItem(draftKey(form), JSON.stringify(data)); } catch { /* stockage indisponible */ }
+    };
+    form.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(save, 400); });
+    form.addEventListener('change', save);
+  }
+  const clearDraft = form => { try { sessionStorage.removeItem(draftKey(form)); } catch { /* rien à effacer */ } };
 
   function status(form, message, isError = false) {
     const el = form.querySelector('[data-status]');
@@ -225,6 +262,7 @@ export function initForms(i18n) {
         form.hidden = true;
         success.hidden = false;
         success.focus();
+        clearDraft(form);
       } catch (error) {
         console.error(error);
         status(form, T.genericError, true);
@@ -294,6 +332,7 @@ export function initForms(i18n) {
         form.hidden = true;
         success.hidden = false;
         success.focus();
+        clearDraft(form);
         success.querySelector('[data-again]').addEventListener('click', () => {
           success.hidden = true;
           form.hidden = false;
@@ -337,6 +376,7 @@ export function initForms(i18n) {
   const setups = { register: setupRegister, login: setupLogin, reset: setupReset, contact: setupContact };
   document.querySelectorAll('[data-form]').forEach(form => {
     wireLiveValidation(form);
+    if (['register', 'contact'].includes(form.dataset.form)) { restoreDraft(form); watchDraft(form); }
     setups[form.dataset.form]?.(form);
   });
 }

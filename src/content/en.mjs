@@ -155,6 +155,7 @@ export default {
       summaryOne: 'Please check this field:'
     },
     sending: 'Sending…',
+    draftRestored: 'We kept what you had typed: you can pick up where you left off.',
     genericError: 'Something went wrong. Please try again in a moment or write to contact@fortydays.com.',
     totalLabel: '·',
     register: {
@@ -284,6 +285,11 @@ export default {
         { q: 'Is the program available in France and Israel, and in which language?', a: 'Yes, 40 Days is available in France and in Israel. The platform, forums and classes are in English, French and Hebrew, and our team replies in all three languages.' }
       ]
     },
+    reassure: [
+      { icon: 'lock', text: 'Secure payment' },
+      { icon: 'calendar', text: 'Book while pregnant' },
+      { icon: 'globe', text: 'In English, French and Hebrew' }
+    ],
     final: {
       title: 'Take care of the one who takes care of everyone',
       text: 'Book your 40 days in a few minutes: we’ll take care of the rest.'
@@ -511,6 +517,7 @@ export default {
 <tbody>
 <tr><td><code>fd-consent</code></td><td>Remembers your cookie choices</td><td>6 months</td><td>Necessary</td></tr>
 <tr><td><code>fd-lang</code></td><td>Remembers your chosen language</td><td>Until deleted</td><td>Necessary</td></tr>
+<tr><td><code>fd-draft-…</code></td><td>Keeps what you typed in a form if the page reloads (session storage)</td><td>Until you close the tab</td><td>Necessary</td></tr>
 </tbody></table></div>
 <p>At present, no analytics or advertising tool is installed. If one were added, it would only be enabled with your consent, under the “Analytics” and “Marketing” categories.</p>` },
       { title: 'Third-party content', html: `<p>To display typefaces and photographs, your browser contacts the servers of Google Fonts and Unsplash, which receive your IP address. These services do not set cookies through our site.</p>` },

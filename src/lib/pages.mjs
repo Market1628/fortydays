@@ -135,6 +135,9 @@ export function homePage(site, t) {
         <a class="btn btn--primary btn--large btn--magnetic" href="${plans}#inscription">${esc(t.ui.cta)}${icon('arrow', 'icon icon--arrow')}</a>
         <a class="btn btn--ghost" href="${plans}?gift=1#inscription">${icon('gift')}${esc(h.cta.gift)}</a>
       </div>
+      <ul class="reassure">
+        ${h.reassure.map(r => `<li>${icon(r.icon)}<span>${r.text}</span></li>`).join('')}
+      </ul>
       <p class="story-credit">${photoCredit('finale', t.ui)}</p>
     </div>
   </section>
@@ -218,6 +221,9 @@ export function homePage(site, t) {
     <h2 class="display" id="final-title">${h.final.title}</h2>
     <p class="lead">${h.final.text}</p>
     <a class="btn btn--primary btn--large btn--magnetic" href="${plans}#inscription">${esc(t.ui.cta)}${icon('arrow', 'icon icon--arrow')}</a>
+    <ul class="reassure">
+        ${h.reassure.map(r => `<li>${icon(r.icon)}<span>${r.text}</span></li>`).join('')}
+      </ul>
   </div>
 </section>`;
 }
